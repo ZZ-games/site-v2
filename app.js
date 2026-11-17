@@ -3,12 +3,12 @@
 const slug = (t) => t.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 GAMES.forEach((g) => {
   g.id = slug(g.title);
-  if (g.repo) {
-    const base = `https://${(g.user || SITE.githubUser).toLowerCase()}.github.io/${g.repo}/`;
-    // Older entries used paths inside a non-existent /games folder on the site.
-    // Resolve those to the actual game's GitHub Pages repository instead.
-    if (!g.url) g.url = base;
-    else if (g.url.startsWith("games/")) g.url = base + g.url.replace(/^games\/[^/]+\/?/, "");
+  if (g.url && g.url.startsWith("games/")) {
+    // The original site repository hosts the complete game library under /site/games/.
+    g.url = `https://zz-games.github.io/site/${g.url}`;
+  } else if (!g.url && g.repo) {
+    // Only use a standalone repository URL when the source list has no hosted folder path.
+    g.url = `https://${(g.user || SITE.githubUser).toLowerCase()}.github.io/${g.repo}/`;
   }
 });
 
