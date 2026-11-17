@@ -357,7 +357,7 @@
     P.cur = t; P.mode = 'song'; P.station = null; P.stream = null;
     stopEngines();
     setNow({ title: t.t, sub: t.src === 'ia' ? t.a + ' · Internet Archive · ' + t.license : t.a, subHref: t.src === 'ia' ? t.archiveUrl : (t.aid ? '#/artist/' + t.aid : ''), art: t.big || t.art, small: t.art, seed: t.t });
-    setBuffering(true); showPlayer(); markCurrent(); renderQueue(); bumpTaste(t);
+    setBuffering(true); markCurrent(); renderQueue(); bumpTaste(t);
     remember({ k: 'song', id: t.id, t: t.t, s: t.a, img: t.art, ref: slim(t) });
     if (t.src === 'au') { await playAudioSource(AU + '/tracks/' + t.id.slice(2) + '/stream?' + APP, tok); return; }
     if (t.src === 'ia') { await playAudioSource(IA + '/download/' + enc(t.id.slice(2)) + '/' + t.file, tok); return; }
@@ -508,9 +508,18 @@
   }
   function setPlaying(on) {
     P.playing = on;
-    if (on) P.fails = 0;
+    if (on) {
+      P.fails = 0;
+      $('#bar').hidden = false;
+      document.body.classList.add('playing-bar');
+      paintPanel();
+    } else {
+      // Keep the compact player out of the way whenever audio is paused or stopped.
+      $('#bar').hidden = true;
+      document.body.classList.remove('playing-bar');
+    }
     document.body.classList.toggle('paused', !on);
-    $$('[data-act=toggle]').forEach((b) => (b.innerHTML = ic(on ? 'pause' : 'play')));
+    $('[data-act=toggle]').forEach((b) => (b.innerHTML = ic(on ? 'pause' : 'play')));
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = on ? 'playing' : 'paused';
   }
   const setBuffering = (on) => document.body.classList.toggle('buffering', on);
