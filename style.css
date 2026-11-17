@@ -533,3 +533,57 @@ body.home .row-head h2::before { content: ""; width: 4px; height: 1.05em; border
   .zz-nav #requestLink { display: none; }
   .zz-nav { padding-top: 10px; padding-bottom: 4px; }
 }
+
+
+/* Game player reliability and responsive layout */
+.play-page { overflow-x: hidden; }
+.play-page main.stage-wrap {
+  width: 100%;
+  max-width: 1600px;
+  padding: 14px clamp(10px, 2vw, 24px) 32px;
+}
+.play-page .play-col { width: 100%; min-width: 0; }
+.play-page .stage {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  height: auto;
+  max-height: calc(100dvh - 150px);
+  margin-inline: auto;
+  background: #000;
+  border-radius: 14px;
+}
+.play-page .stage iframe {
+  display: block;
+  background: #000;
+}
+.play-page .game-title { min-width: 0; flex: 1; }
+.play-page .actions { flex-shrink: 0; }
+.play-page .hint { max-width: 100%; }
+
+@media (max-width: 640px) {
+  .play-page .topbar {
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+  .play-page .logo img { height: 23px; }
+  .play-page .game-title {
+    display: block;
+    text-align: left;
+    font-size: .88rem;
+    margin: 0;
+  }
+  .play-page .actions { gap: 6px; margin-left: 0; }
+  .play-page .actions .btn { padding: 8px 10px; font-size: .78rem; }
+  .play-page main.stage-wrap { padding: 10px 8px 24px; }
+  .play-page .stage {
+    aspect-ratio: 16 / 9;
+    max-height: calc(100dvh - 112px);
+    border-radius: 10px;
+  }
+  .play-page .versions { padding-inline: 2px; }
+}
+@media (max-width: 360px) {
+  .play-page .game-title { font-size: .78rem; }
+  .play-page .actions .btn { padding: 7px 8px; }
+}
