@@ -22,41 +22,6 @@ function coverStyle(g) {
 }
 const initials = (t) => t.split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
 
-// Favorites (stored in this browser)
-const FAV_KEY = "zz-favs";
-function getFavs() {
-  try { return JSON.parse(localStorage.getItem(FAV_KEY)) || []; } catch { return []; }
-}
-const isFav = (id) => getFavs().includes(id);
-function toggleFav(id) {
-  const favs = getFavs();
-  const next = favs.includes(id) ? favs.filter((x) => x !== id) : [...favs, id];
-  try { localStorage.setItem(FAV_KEY, JSON.stringify(next)); } catch {}
-  document.querySelectorAll(`.fav[data-id="${id}"]`).forEach((b) => paintFav(b, next.includes(id)));
-  document.dispatchEvent(new CustomEvent("zz-favs"));
-}
-function paintFav(b, on) {
-  b.classList.toggle("on", on);
-  b.setAttribute("aria-pressed", on);
-  b.title = on ? "Remove from favorites" : "Add to favorites";
-  if (b.classList.contains("fav-btn")) b.innerHTML = (on ? "♥" : "♡") + `<span class="lbl"> ${on ? "Favorited" : "Favorite"}</span>`;
-  else b.textContent = on ? "♥" : "♡";
-}
-function favButton(g, big) {
-  const b = document.createElement("button");
-  b.type = "button";
-  b.className = big ? "btn ghost fav fav-btn" : "fav";
-  b.dataset.id = g.id;
-  b.setAttribute("aria-label", "Favorite " + g.title);
-  paintFav(b, isFav(g.id));
-  b.addEventListener("click", (e) => {
-    e.preventDefault(); e.stopPropagation();
-    toggleFav(g.id);
-    b.classList.remove("pop"); void b.offsetWidth; b.classList.add("pop");
-  });
-  return b;
-}
-
 const badgeFor = (g) => g.new ? `<span class="badge new">NEW</span>` : g.hot ? `<span class="badge hot">HOT</span>` : "";
 
 function card(g, opts = {}) {
@@ -71,7 +36,6 @@ function card(g, opts = {}) {
     </div>
     <div class="meta"><div class="name"></div></div>`;
   a.querySelector(".name").textContent = g.title;
-  a.querySelector(".cover").appendChild(favButton(g));
   return a;
 }
 
@@ -295,9 +259,6 @@ function initHome() {
     document.getElementById(boxId).replaceChildren(...list.map((g) => card(g)));
   };
   const byIds = (ids) => ids.map((id) => GAMES.find((g) => g.id === id)).filter(Boolean);
-  function renderFavs() { fill("favWrap", "favs", byIds(getFavs())); }
-  document.addEventListener("zz-favs", renderFavs);
-  renderFavs();
   if (S.showRecent) fill("recentWrap", "recent", byIds(getRecent()));
   railArrows();
 
@@ -493,7 +454,6 @@ function initPlay() {
   document.getElementById("gameTitle").textContent = g.title;
   if (!g.gamble) {
     addRecent(g.id);
-    document.querySelector(".play-page .actions").prepend(favButton(g, true));
   }
 
   const frame = document.getElementById("frame");
