@@ -209,7 +209,7 @@
     if (!license) return null;
     const creators = iaText(md.creator || doc.creator), title = iaText(md.title || doc.title).trim();
     if (!title) return null;
-    const norm = (v) => String(v || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]+/g, ' ').replace(/\\s+/g, ' ').trim();
+    const norm = (v) => String(v || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
     if (expectedArtist) { const want = norm(expectedArtist), got = norm(creators); if (!got || (!got.includes(want) && !want.includes(got))) return null; }
     const file = iaFiles(meta.files)[0]; if (!file) return null;
     const name = file.name.split('/').map(encodeURIComponent).join('/'), ext = file.name.split('.').pop().toLowerCase();
@@ -217,7 +217,7 @@
     return { id: 'ia' + id, src: 'ia', t: title, a: creators || 'Internet Archive contributor', al: 'Internet Archive · ' + license, art: IA + '/services/img/' + enc(id), big: IA + '/services/img/' + enc(id), d: iaDuration(file.length || md.runtime), file: name, license, licenseUrl, archiveUrl: IA + '/details/' + enc(id) };
   }
   async function searchArchiveTracks(query, expectedArtist = '', limit = 12) {
-    const phrase = String(query || '').replace(/[\\\\\"]/g, ' ').replace(/\\s+/g, ' ').trim().slice(0, 100); if (!phrase) return [];
+    const phrase = String(query || '').replace(/["\\]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 100); if (!phrase) return [];
     const q = 'mediatype:audio AND (title:"' + phrase + '" OR creator:"' + phrase + '")';
     const url = IA + '/advancedsearch.php?q=' + enc(q) + '&fl[]=identifier&fl[]=title&fl[]=creator&fl[]=licenseurl&fl[]=mediatype&rows=' + Math.min(30, limit * 2) + '&page=1&output=json&sort[]=downloads+desc';
     const result = await cached('ia:search:' + q, () => getJSON(url), 15 * 60e3), docs = result?.response?.docs || [];
@@ -226,7 +226,7 @@
   }
   async function findArchiveVersion(t) {
     const tracks = await searchArchiveTracks(t.t, t.a, 10);
-    const norm = (v) => String(v || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]+/g, ' ').replace(/\\s+/g, ' ').trim();
+    const norm = (v) => String(v || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
     return tracks.find((x) => norm(x.t) === norm(t.t)) || tracks[0] || null;
   }
 
@@ -333,7 +333,7 @@
   audio.addEventListener('waiting', () => { if (P.eng === 'audio') setBuffering(true); });
   audio.addEventListener('ended', () => { if (P.eng === 'audio') onEnded(); });
   audio.addEventListener('error', () => { if (P.eng === 'audio' && audio.getAttribute('src')) { setBuffering(false); failSkip('Track failed — skipping'); } });
-  const normAudio = (v) => String(v || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]+/g, ' ').replace(/\\s+/g, ' ').trim();
+  const normAudio = (v) => String(v || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
   async function findAudiusVersion(t) {
     const found = await A('/tracks/search?query=' + enc([t.a, t.t].filter(Boolean).join(' ')) + '&limit=25');
     const title = normAudio(t.t), artist = normAudio(t.a);
