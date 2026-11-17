@@ -206,7 +206,7 @@
     const id = doc.identifier; if (!id) return null;
     const meta = await cached('ia:item:' + id, () => getJSON(IA + '/metadata/' + enc(id)), 60 * 60e3);
     const md = meta?.metadata || {}, licenseUrl = md.licenseurl || doc.licenseurl || '', license = iaLicense(licenseUrl);
-    if (!license) return null;
+    if ((md.mediatype || doc.mediatype) !== 'audio' || !license) return null;
     const creators = iaText(md.creator || doc.creator), title = iaText(md.title || doc.title).trim();
     if (!title) return null;
     const norm = (v) => String(v || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
@@ -388,7 +388,7 @@
       audio.play().catch(() => setPlaying(false));
       if (!previewNoted || why === 'nomatch') {
         previewNoted = true;
-        toast('No Audius version found — playing a 30-second preview');
+        toast('No full Audius or licensed Archive version found — playing a 30-second preview');
       }
       return true;
     } catch { return false; }
