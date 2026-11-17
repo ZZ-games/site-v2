@@ -193,23 +193,6 @@
     d: x.duration || 0, art: x.artwork?.['480x480'] || x.artwork?.['150x150'] || '', big: x.artwork?.['1000x1000'] || x.artwork?.['480x480'] || '',
     g: x.genre || '', al: x.genre || '',
   });
-  const RADIO_HOSTS = ['https://de1.api.radio-browser.info', 'https://nl1.api.radio-browser.info', 'https://at1.api.radio-browser.info', 'https://fi1.api.radio-browser.info'];
-  const slimSt = (s) => ({ id: s.id, name: s.name, url: s.url, art: s.art, cc: s.cc, br: s.br, tags: s.tags });
-  const stations = (params) => cached('r:' + params, async () => {
-    for (const h of shuffled(RADIO_HOSTS)) {
-      try {
-        const list = await getJSON(`${h}/json/stations/search?${params}&hidebroken=true&order=clickcount&reverse=true&limit=72`, 9000);
-        const seen = new Set();
-        return list.filter((s) => {
-          const k = s.name.trim().toLowerCase();
-          if (!s.url_resolved?.startsWith('https') || seen.has(k)) return false;
-          seen.add(k); return true;
-        }).map((s) => ({ id: s.stationuuid, name: s.name.trim(), url: s.url_resolved, art: s.favicon || '', cc: s.countrycode || '', br: s.bitrate || 0, tags: (s.tags || '').split(',').filter(Boolean).slice(0, 3) }));
-      } catch { /* next mirror */ }
-    }
-    throw new Error('The radio directory is unreachable right now');
-  });
-
   const AU_GENRES = ['All', 'Hip-Hop/Rap', 'Electronic', 'Pop', 'R&B/Soul', 'House', 'Lo-Fi', 'Alternative', 'Rock', 'Trap', 'Dubstep', 'Techno', 'Drum & Bass', 'Ambient', 'Latin', 'Jazz', 'Country', 'Funk'];
   const MOODS = [
     { id: 'sunday', name: 'Slow Sunday', d: 'Soft edges, no rush', g: ['Lo-Fi', 'Ambient'], c: ['#f2a65a', '#9c3d22'] },
@@ -223,16 +206,6 @@
     { id: 'glitter', name: 'Glitter Pop', d: 'Bright & catchy', g: ['Pop'], c: ['#ff86c2', '#6b33e8'] },
     { id: 'drops', name: 'Big Drops', d: 'Synths for days', g: ['Electronic', 'Dubstep'], c: ['#3cc8f0', '#25267a'] },
   ];
-  const RADIO_TAGS = [['Top', ''], ['Pop', 'pop'], ['Hip-hop', 'hip hop'], ['Dance', 'dance'], ['Rock', 'rock'], ['Chill', 'chillout'], ['R&B', 'rnb'], ['Jazz', 'jazz'], ['Classical', 'classical'], ['Country', 'country'], ['Latin', 'latin'], ['K-pop', 'kpop'], ['Indie', 'indie'], ['Metal', 'metal'], ['80s', '80s'], ['90s', '90s'], ['Soul', 'soul'], ['Talk', 'talk'], ['News', 'news']];
-  const LOFI = [
-    ['rFZHOHl-L8A', 'Study beats', 'Mellow hip hop to focus with'], ['JD-kMIpDfnY', 'Sleepy beats', 'Quiet loops for winding down'],
-    ['4xDzrJKXOOY', 'Neon drive', 'Synthwave for night sessions'], ['3PFJ9SETS4M', 'Lounge house', 'Warm, low-key grooves'],
-    ['E2vONfzoyRI', 'Jazz café', 'Brushed drums and soft keys'], ['CwPCy1GLS38', 'Rainy window', 'Melancholy beats for grey days'],
-    ['1Tl2FtV06qo', 'Lantern beats', 'East Asian lofi textures'], ['GSfT7H87zq4', 'Deep space', 'Ambient synth drift'],
-    ['N0snMcR6aaA', 'Piano room', 'Gentle piano to think to'], ['jXAEIWcGXwE', 'Reading nook', 'Calm classical'],
-    ['VAlMDl00mYY', 'Dreamstate', 'Slow lofi for sleep'], ['qGohtGC5Rtk', 'Focus sprints', 'Work-along pomodoro sessions'],
-  ];
-
   async function mixTracks(m) {
     const lists = await Promise.all(m.g.map((g) => A(`/tracks/trending?time=week&limit=40&genre=${enc(g)}`).catch(() => [])));
     const seen = new Set();
@@ -969,52 +942,6 @@
     PAGE_TRACKS = tracks;
   }
 
-  /* --- radio --- */
-  let radioTag = 'Top';
-  const stationCard = (s) => {
-    const saved = S.stations.some((x) => x.id === s.id);
-    return `<div class="st" data-sid="${esc(s.id)}" role="button" tabindex="0">${s.art ? `<img class="logo" src="${esc(s.art)}" alt="" loading="lazy" data-seed="${esc(s.name)}">` : ph(s.name, 'logo')}
-      <span><span class="onair">On air</span><b>${esc(s.name)}</b><small>${esc([s.cc, ...(s.tags || []).slice(0, 2)].filter(Boolean).join(' · '))}${s.br ? ` · ${s.br} kbps` : ''}</small></span>
-      <button class="ib sm star${saved ? ' on' : ''}" data-star="${esc(s.id)}" aria-label="Save station">${ic('star')}</button></div>`;
-  };
-  const STMETA = new Map();
-  const regSt = (list) => { list.forEach((s) => STMETA.set(s.id, s)); return list; };
-  async function viewRadio(_, q, tok) {
-    regSt(S.stations); regSt(S.tuned);
-    V.innerHTML = `<header class="hero"><span class="eyebrow">Live</span><h1>Live <em>radio</em></h1>
-      <form class="find" id="rFind">${ic('search')}<input name="q" placeholder="Search thousands of stations" autocomplete="off" aria-label="Search stations"></form></header>
-      ${S.stations.length ? `<section class="sec">${secHead(1, 'Your stations')}<div class="stations">${S.stations.map(stationCard).join('')}</div></section>` : ''}
-      ${S.tuned.length ? `<section class="sec">${secHead(S.stations.length ? 2 : 1, 'Recently tuned')}<div class="stations">${S.tuned.slice(0, 6).map(stationCard).join('')}</div></section>` : ''}
-      <section class="sec">${secHead(1 + !!S.stations.length + !!S.tuned.length, 'Station directory', 'Popular streams from around the world')}
-        <div class="chips" id="rChips">${RADIO_TAGS.map(([l]) => `<button class="chip${l === radioTag ? ' on' : ''}" data-tag="${esc(l)}">${esc(l)}</button>`).join('')}</div>
-        <div id="rBox"><div class="stations">${Array.from({ length: 9 }, () => '<div class="sk" style="height:74px"></div>').join('')}</div></div></section>`;
-    const load = async (params) => {
-      fill('rBox', `<div class="stations">${Array.from({ length: 9 }, () => '<div class="sk" style="height:74px"></div>').join('')}</div>`, tok);
-      try { const list = regSt(await stations(params)); fill('rBox', list.length ? `<div class="stations">${list.map(stationCard).join('')}</div>` : emptyBox('No stations found'), tok); markCurrent(); }
-      catch (e) { fill('rBox', errBox(e), tok); }
-    };
-    const tagParams = () => { const t = RADIO_TAGS.find(([l]) => l === radioTag)?.[1]; return t ? 'tag=' + enc(t) : ''; };
-    $('#rChips').onclick = (e) => { const b = e.target.closest('[data-tag]'); if (!b) return; radioTag = b.dataset.tag; $$('#rChips .chip').forEach((c) => c.classList.toggle('on', c === b)); $('#rFind input').value = ''; load(tagParams()); };
-    let deb;
-    $('#rFind input').addEventListener('input', (e) => { clearTimeout(deb); deb = setTimeout(() => { const v = e.target.value.trim(); load(v ? 'name=' + enc(v) : tagParams()); }, 400); });
-    $('#rFind').onsubmit = (e) => e.preventDefault();
-    load(tagParams());
-  }
-  function toggleStation(id) {
-    const s = STMETA.get(id); if (!s) return;
-    const on = S.stations.some((x) => x.id === id);
-    S.stations = on ? S.stations.filter((x) => x.id !== id) : [slimSt(s), ...S.stations];
-    save('stations');
-    $$(`[data-star="${CSS.escape(id)}"]`).forEach((b) => b.classList.toggle('on', !on));
-    toast(on ? `Removed ${s.name}` : `Saved ${s.name}`);
-  }
-
-  /* --- lofi --- */
-  function viewLofi() {
-    V.innerHTML = `<header class="hero"><span class="eyebrow">24 / 7</span><h1>Lofi <em>lounge</em></h1><p style="color:var(--mute);margin:0;max-width:520px">Always-on streams. They open in a small video window that keeps playing while you browse.</p></header>
-      <section class="sec"><div class="streams">${LOFI.map((s) => `<button class="stream" data-v="${s[0]}"><div class="thumb"><img src="https://i.ytimg.com/vi/${s[0]}/hqdefault.jpg" alt="" loading="lazy" data-seed="${esc(s[1])}"><span class="livepill">Live</span></div><b>${esc(s[1])}</b><small>${esc(s[2])}</small></button>`).join('')}</div></section>`;
-  }
-
   /* ================= global click handling ================= */
   async function playCollection(spec, shuffle = false) {
     const [kind, id] = spec.split(/:(.*)/);
@@ -1050,12 +977,6 @@
     if (aa && PAGE_TRACKS.length) { addMenu(aa, PAGE_TRACKS); return; }
     const fb = t.closest('[data-follow]');
     if (fb) { toggleFollow(fb.dataset.follow); return; }
-    const star = t.closest('[data-star]');
-    if (star) { e.stopPropagation(); toggleStation(star.dataset.star); return; }
-    const st = t.closest('.st[data-sid]');
-    if (st) { const s = STMETA.get(st.dataset.sid); if (s) playStation(s); return; }
-    const sv = t.closest('.stream[data-v]');
-    if (sv) { const s = LOFI.find((x) => x[0] === sv.dataset.v); if (s) playStream(s); return; }
     if (t.closest('[data-clearjump]')) { S.activity = []; save('activity'); route(); return; }
     if (t.closest('[data-clearhist]')) { S.activity = S.activity.filter((a) => a.k !== 'song'); save('activity'); route(); return; }
     const uj = t.closest('[data-unjump]');
