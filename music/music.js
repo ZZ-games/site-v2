@@ -336,7 +336,7 @@ const YT_KEY = 'AIzaSyCZ2vIxFir0cgT1RdAMeow60_IsPGfIJX8';
     return (yt.ready ??= loadYTApi().then(() => new Promise((res) => {
       yt.p = new YT.Player('dockFrame', {
         host: 'https://www.youtube-nocookie.com', width: '100%', height: '100%',
-        playerVars: { autoplay: 1, controls: 0, playsinline: 1, rel: 0, iv_load_policy: 3, disablekb: 1, fs: 0, origin: location.origin },
+        playerVars: { autoplay: 1, controls: 1, playsinline: 1, rel: 0, iv_load_policy: 3, disablekb: 0, fs: 1, origin: location.origin },
         events: { onReady: () => { applyVol(); res(yt.p); }, onStateChange: (e) => ytState(e.data), onError: (e) => ytError(e.data) },
       });
     })).catch((e) => { yt.ready = null; throw e; }));
@@ -386,7 +386,7 @@ const YT_KEY = 'AIzaSyCZ2vIxFir0cgT1RdAMeow60_IsPGfIJX8';
       audio.play().catch(() => setPlaying(false));
       return;
     }
-    P.eng = 'yt'; paintVideoBtn();
+    P.eng = 'yt'; setVideo(true); paintVideoBtn();
     if (FILE || (NOAPI && !YT_KEY)) { // no way to find the full song on YouTube: play Deezer's preview
       if (!(await playPreview(t, tok, FILE ? 'file' : 'noapi')) && tok === P.tok) failSkip(`Couldn't play “${t.t}” — skipping`, tok);
       return;
@@ -1249,7 +1249,7 @@ const YT_KEY = 'AIzaSyCZ2vIxFir0cgT1RdAMeow60_IsPGfIJX8';
   $('#npAdd').onclick = (e) => { if (P.cur) addMenu(e.currentTarget, [P.cur]); };
   $('#npRadio').onclick = () => { if (P.cur) songRadio(P.cur); };
   $('#videoBtn').onclick = $('#npVideo').onclick = () => { if (P.eng === 'yt') setVideo($('#dock').classList.contains('off')); };
-  $('#dockHide').onclick = () => setVideo(false);
+  $('#dockHide').onclick = () => toast('The YouTube player stays visible while a song is playing.');
   $('#dockSize').onclick = () => $('#dock').classList.toggle('big');
   $('#stopBtn').onclick = closePlayer;
   $('#qClear').onclick = () => { P.q = P.q.slice(0, P.i + 1); P.orig = P.q.slice(); renderQueue(); toast('Queue cleared'); };
