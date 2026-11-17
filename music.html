@@ -24,7 +24,7 @@
       <a href="index.html" class="m-logo"><img src="logo-flat.png?v=2" alt="ZZ Games"></a>
       <span class="fx-pill" aria-hidden="true"></span>
       <nav class="m-links" aria-label="Main">
-        <a href="games.html" target="_blank" rel="noopener">Games</a>
+        <a href="games.html" id="openGamesView">Games</a>
         <a href="music.html" class="on">Music</a>
         <a href="watch.html?type=movie&id=popular">Movies</a>
         <a href="watch.html?type=tv&id=popular">TV</a>
@@ -58,11 +58,13 @@
 
   <div class="m-note" id="previewNote" hidden>
     <i data-ic="wave"></i>
-    <span><b>Audius and openly licensed Internet Archive recordings can play in full when available. Other catalogue tracks use 30-second previews.</span>
+    <span><b>Only full-length Audius or openly licensed Internet Archive recordings play. Short catalogue previews are disabled.</span>
     <button class="ib sm" id="noteX" aria-label="Dismiss"><i data-ic="close"></i></button>
   </div>
 
   <main class="m-main" id="main"><div class="view" id="view"></div></main>
+
+  <div id="gameShell" hidden><iframe id="gameFrame" title="ZZ Games" allow="autoplay; fullscreen; gamepad; clipboard-write" allowfullscreen></iframe></div>
 
   <aside class="np" id="np" aria-label="Now playing">
     <div class="np-head"><span class="eyebrow">Now playing</span><button class="ib" id="npClose" aria-label="Close"><i data-ic="close"></i></button></div>
@@ -118,7 +120,54 @@
   <div class="menu" id="menu" hidden></div>
   <div class="toasts" id="toasts" aria-live="polite"></div>
   <dialog id="dlg"></dialog>
+  <style>
+    #gameShell { position:fixed; inset:0 0 var(--bar) 0; z-index:40; background:#020414; }
+    #gameShell[hidden] { display:none; }
+    #gameFrame { display:block; width:100%; height:100%; border:0; background:#020414; }
+    body.games-overlay { overflow:hidden; }
+    body.games-overlay > .m-top,
+    body.games-overlay > .m-note,
+    body.games-overlay > .m-main { visibility:hidden; pointer-events:none; }
+  </style>
   <script src="music/music.js?v=202611175"></script>
+  <script>
+    (() => {
+      const shell = document.getElementById('gameShell');
+      const frame = document.getElementById('gameFrame');
+      const open = document.getElementById('openGamesView');
+      let active = false;
+      function closeGames() {
+        if (!active) return;
+        active = false;
+        document.body.classList.remove('games-overlay');
+        shell.hidden = true;
+        frame.src = 'about:blank';
+      }
+      function openGames(push = true) {
+        if (active) return;
+        active = true;
+        document.body.classList.add('games-overlay');
+        shell.hidden = false;
+        frame.src = 'games.html';
+        if (push) history.pushState({ zzGamesOverlay: true }, '', location.pathname + location.search + '#games');
+      }
+      open?.addEventListener('click', (event) => { event.preventDefault(); openGames(); });
+      window.addEventListener('popstate', closeGames);
+      frame.addEventListener('load', () => {
+        try {
+          frame.contentDocument.addEventListener('click', (event) => {
+            const link = event.target.closest('a[href]');
+            if (!link) return;
+            const url = new URL(link.href, location.href);
+            if (url.origin === location.origin && /(^|\/)music\.html$/.test(url.pathname)) {
+              event.preventDefault();
+              history.back();
+            }
+          }, true);
+        } catch (_) {}
+      });
+    })();
+  </script>
   <script src="zz-fx.js?v=202611176"></script>
 </body>
 </html>
