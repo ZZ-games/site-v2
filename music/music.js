@@ -861,8 +861,8 @@
       ${j.tracks.length ? `<section class="sec">${secHead(++n, 'Songs', '', `<button class="btn hot" id="srPlay">${ic('play')}Play all</button>`)}${rows(j.tracks.slice(0, 20))}</section>` : ''}
       ${j.artists.length ? `<section class="sec">${secHead(++n, 'Artists')}<div class="hscroll">${j.artists.map(artistCard).join('')}</div></section>` : ''}
       ${j.albums.length ? `<section class="sec">${secHead(++n, 'Albums')}<div class="hscroll">${j.albums.map((a) => card({ href: `#/album/${a.id}`, img: a.art, title: a.t, sub: `${a.a}${a.year ? ' · ' + a.year : ''}`, play: `album:${a.id}` })).join('')}</div></section>` : ''}
-      ${aut.length ? `<section class="sec">${secHead(++n, 'On Audius', 'Independent uploads')}${rows(aut)}</section>` : ''}`;
-      ${iat.length ? `<section class="sec">${secHead(++n, 'Internet Archive', 'Openly licensed recordings · CC0 / CC BY / CC BY-SA')}${rows(iat)}</section>` : ''}
+      ${aut.length ? `<section class="sec">${secHead(++n, 'On Audius', 'Independent uploads')}${rows(aut)}</section>` : ''}
+      ${iat.length ? `<section class="sec">${secHead(++n, 'Internet Archive', 'Openly licensed recordings · CC0 / CC BY / CC BY-SA')}${rows(iat)}</section>` : ''}`;
     const sp = $('#srPlay'); if (sp) sp.onclick = () => { rememberSearch(q); playList(j.tracks.slice(0, 20), 0, { label: `Search · ${q}` }); };
     box.addEventListener('click', (e) => { if (e.target.closest('.row,.artist,.card,.jb')) rememberSearch(q); }, { once: true });
     markCurrent();
