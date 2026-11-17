@@ -6,10 +6,10 @@
   <title>Play · ZZ Games</title>
   <script>document.title = "ZZ Classroom";</script>
   <script src="zz-guard.js?v=202611170"></script>
-  <link rel="icon" type="image/svg+xml" href="images/tab/classroom.svg">
-  <link rel="icon" type="image/png" sizes="32x32" href="images/tab/classroom-32.png">
-  <link rel="icon" type="image/png" sizes="48x48" href="images/tab/classroom-48.png">
-  <link rel="icon" type="image/png" sizes="192x192" href="images/tab/classroom-192.png">
+  <link rel="icon" type="image/svg+xml" href="tab/classroom.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="tab/classroom-32.png">
+  <link rel="icon" type="image/png" sizes="48x48" href="tab/classroom-48.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="tab/classroom-192.png">
   <meta name="description" content="Play free browser games on ZZ Games.">
   <link rel="stylesheet" href="fonts/fonts.css">
   <link rel="stylesheet" href="style.css?v=202611170">
@@ -17,7 +17,7 @@
 </head>
 <body class="play-page">
   <header class="topbar">
-    <a href="index.html" class="logo"><img src="images/logo-flat.png?v=2" alt="ZZ Games"></a>
+    <a href="index.html" class="logo"><img src="logo-flat.png?v=2" alt="ZZ Games"></a>
     <h1 id="gameTitle" class="game-title"></h1>
     <div class="actions">
       <button id="reload" class="btn ghost" title="Restart">Restart</button>
@@ -30,7 +30,7 @@
       <div id="versions" class="versions" hidden></div>
       <div id="stage" class="stage">
         <div id="loader" class="loader"><div class="spinner"></div><p>Loading game…</p></div>
-        <iframe id="frame" sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-pointer-lock allow-downloads allow-orientation-lock allow-presentation" allow="fullscreen; autoplay; gamepad; clipboard-write" allowfullscreen></iframe>
+        <iframe id="frame" sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-pointer-lock allow-downloads allow-orientation-lock allow-presentation allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation" allow="fullscreen; autoplay; gamepad; clipboard-write" allowfullscreen></iframe>
       </div>
       <p class="hint">Game not working? <a id="report" href="request.html?type=broken">Report a problem</a></p>
     </div>
