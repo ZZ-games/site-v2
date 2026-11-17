@@ -16,8 +16,15 @@
   <link rel="stylesheet" href="zz-fx.css?v=202611176">
 </head>
 <body class="play-page">
-  <header class="topbar">
+  <header class="topbar zz-nav play-topbar">
     <a href="index.html" class="logo"><img src="logo-flat.png?v=2" alt="ZZ Games"></a>
+    <nav class="zz-links play-links" aria-label="Main">
+      <a href="games.html" class="on" aria-current="page">Games</a>
+      <a href="music.html">Music</a>
+      <a href="watch.html?type=movie&id=popular">Movies</a>
+      <a href="watch.html?type=tv&id=popular">TV</a>
+      <a href="ai.html">AI</a>
+    </nav>
     <h1 id="gameTitle" class="game-title"></h1>
     <div class="actions">
       <button id="reload" class="btn ghost" title="Restart">Restart</button>
