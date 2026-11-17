@@ -7,7 +7,7 @@
    songs fall back to 30-second previews. To get full songs there, create a YouTube Data API v3 key
    in Google Cloud, restrict it to "Websites" -> https://zz-games.github.io/*, and paste it below.
    The free quota covers roughly 100 new song lookups a day (each found song is remembered). */
-const YT_KEY = '';
+const YT_KEY = 'AIzaSyCZ2vIxFir0cgT1RdAMeow60_IsPGfIJX8';
 (() => {
   /* ================= helpers ================= */
   const $ = (s, r = document) => r.querySelector(s);
