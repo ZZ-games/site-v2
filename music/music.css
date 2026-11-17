@@ -355,11 +355,11 @@ body.buffering .playbtn { animation: breathe 1s ease-in-out infinite; }
 input[type=range] { accent-color: var(--accent); }
 
 /* video window */
-.dock { position: fixed; right: 18px; bottom: calc(var(--bar) + 16px); width: 340px; z-index: 47; background: #000; border-radius: 16px; overflow: hidden; border: 1px solid #1f6bff55; box-shadow: 0 20px 50px #000c, 0 0 30px #1f6bff33; transition: width .25s; }
+.dock { position: fixed; right: 18px; bottom: calc(var(--bar) + 16px); width: 360px; z-index: 47; background: #000; border-radius: 16px; overflow: hidden; border: 1px solid #1f6bff55; box-shadow: 0 20px 50px #000c, 0 0 30px #1f6bff33; transition: width .25s; }
 .dock.big { width: min(640px, calc(100vw - 36px)); }
 .dock-head { display: flex; align-items: center; gap: 2px; padding: 4px 4px 4px 12px; background: #050a2e; color: var(--soft); font-size: .8rem; font-weight: 600; }
 .dock-head span { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.dock-frame { aspect-ratio: 16 / 9; }
+.dock-frame { aspect-ratio: 16 / 9; min-height: 200px; }
 .dock-frame iframe, .dock-frame > div { width: 100%; height: 100%; display: block; border: 0; }
 .dock.off { width: 2px !important; height: 2px; opacity: .01; pointer-events: none; right: 0; bottom: 0; border: 0; box-shadow: none; }
 .dock.off .dock-head { display: none; }
@@ -423,7 +423,7 @@ dialog .row-btns { display: flex; justify-content: flex-end; gap: 8px; margin-to
   .bar-prog { left: 14px; right: 14px; }
   .np { width: 100vw; }
   body.playing-bar .np { bottom: calc(var(--bar) + 16px); }
-  .dock { bottom: calc(var(--bar) + 26px); right: 10px; width: 220px; }
+  .dock { bottom: calc(var(--bar) + 26px); right: 10px; width: min(360px, calc(100vw - 20px)); }
   .ph-head { grid-template-columns: 1fr; justify-items: start; }
   .ph-head .cover { width: min(240px, 64vw); }
   .row { grid-template-columns: 46px minmax(0, 1fr) 34px 34px; gap: 10px; padding: 6px 4px; }
