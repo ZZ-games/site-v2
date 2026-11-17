@@ -1,0 +1,2 @@
+/* Keep Settings at the far-right edge of the main navigation bar. */
+.zz-nav > .icon-btn { margin-left: auto; }
