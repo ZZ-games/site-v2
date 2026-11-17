@@ -830,13 +830,13 @@ const YT_KEY = 'AIzaSyCZ2vIxFir0cgT1RdAMeow60_IsPGfIJX8';
     const tok = ++VT;
     for (const k of LISTS.keys()) if (!k.startsWith('Q')) LISTS.delete(k);
     closeMenu();
-    const r = parts[0] || 'home';
-    CUR_TAB = { home: 'home', library: 'library', list: 'library', radio: 'radio', lofi: 'lofi' }[r] || '';
+    const r = ['radio', 'lofi'].includes(parts[0]) ? 'home' : (parts[0] || 'home');
+    CUR_TAB = { home: 'home', library: 'library', list: 'library' }[r] || '';
     paintChans(CUR_TAB);
     document.body.classList.toggle('m-compact', r !== 'home');
     if (r !== 'search' && MQ.value && document.activeElement !== MQ) MQ.value = '';
     scrollTo({ top: 0, behavior: 'instant' });
-    const views = { home: viewHome, search: viewSearch, library: viewLibrary, radio: viewRadio, lofi: viewLofi, artist: viewArtist, album: viewAlbum, list: viewList, aplaylist: viewAPlaylist, mix: viewMix, chart: viewChart };
+    const views = { home: viewHome, search: viewSearch, library: viewLibrary, artist: viewArtist, album: viewAlbum, list: viewList, aplaylist: viewAPlaylist, mix: viewMix, chart: viewChart };
     try { await (views[r] || viewHome)(parts[1], q, tok); }
     catch (e) { if (live(tok)) V.innerHTML = errBox(e); console.error(e); }
     markCurrent();
