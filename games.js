@@ -25,7 +25,7 @@ const SITE = {
   // The "Request a game" page sends answers to your Google Form.
   // entry = the id of a paragraph question in that form, like "entry.123456789"
   // Games in the games/ folder that aren't in this copy of the site load from here instead
-  liveSite: "https://zz-games.github.io/site-v2/",
+  
   // TMDB Read Access Token (v3 auth) for Movies/TV — https://www.themoviedb.org/settings/api
   tmdbToken: "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI2ZjVlODY4NzM0YmQxMWIxYjY3NzU5YjJmMjE1ZDNiNyIsIm5iZiI6MTc5NDg2MzY3NC43MDgsInN1YiI6IjZhZmI3MjNhZjI3YTQyYmJhMTI3NTJiNSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.4_0LOJOSQAiyq1HRnzvWhe1to5amc3yfem1BI0OKIE8",
   requestForm: {
@@ -50,7 +50,7 @@ const GAMES = [
   { title: "Retro Bowl", category: "Sports", repo: "retro-bowl", url: "games/retro-bowl/", image: "covers/retro-bowl.jpg", featured: true, hot: true, tags: "rb football", pick: true,
     versions: [
       { label: "Normal", url: "games/retro-bowl/" },
-      { label: "Hacked", url: "games/retro-bowl-glitched/", note: "999 coaching credits and free upgrades. Saves separately from Normal." },
+      { label: "Hacked", url: "https://zz-games.github.io/Retro-Bowl-Glitched-/", note: "999 coaching credits and free upgrades. Saves separately from Normal." },
     ] },
   { title: "Retro Bowl College", category: "Sports", repo: "Retro-Bowl-College", url: "games/retro-bowl-college/", image: "covers/retro-bowl-college.jpg" },
   { title: "Slow Roads", category: "Racing", repo: "slow-roads", url: "games/slow-roads/", image: "covers/slow-roads.jpg" },
