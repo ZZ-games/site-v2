@@ -28,9 +28,6 @@ function card(g, opts = {}) {
   const a = document.createElement("a");
   a.className = "card" + (opts.big ? " big" : "");
   a.href = `play.html?game=${g.id}`;
-  // Keep the music tab alive while a game opens in its own tab.
-  a.target = "_blank";
-  a.rel = "noopener";
   a.innerHTML = `
     <div class="cover" style="${coverStyle(g)}">
       ${g.image ? "" : `<span class="initials">${initials(g.title)}</span>`}
