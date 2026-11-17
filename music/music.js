@@ -356,7 +356,7 @@
     const tok = ++P.tok;
     P.cur = t; P.mode = 'song'; P.station = null; P.stream = null;
     stopEngines();
-    setNow({ title: t.t, sub: t.a, subHref: t.aid ? '#/artist/' + t.aid : '', art: t.big || t.art, small: t.art, seed: t.t });
+    setNow({ title: t.t, sub: t.src === 'ia' ? t.a + ' · Internet Archive · ' + t.license : t.a, subHref: t.src === 'ia' ? t.archiveUrl : (t.aid ? '#/artist/' + t.aid : ''), art: t.big || t.art, small: t.art, seed: t.t });
     setBuffering(true); showPlayer(); markCurrent(); renderQueue(); bumpTaste(t);
     remember({ k: 'song', id: t.id, t: t.t, s: t.a, img: t.art, ref: slim(t) });
     if (t.src === 'au') { await playAudioSource(AU + '/tracks/' + t.id.slice(2) + '/stream?' + APP, tok); return; }
@@ -369,7 +369,7 @@
     try {
       const archiveMatch = await findArchiveVersion(t);
       if (tok !== P.tok) return;
-      if (archiveMatch) { toast('Playing openly licensed audio from Internet Archive · ' + archiveMatch.license); await playAudioSource(IA + '/download/' + enc(archiveMatch.id.slice(2)) + '/' + archiveMatch.file, tok); return; }
+      if (archiveMatch) { setNow({ title: t.t, sub: t.a + ' · Internet Archive · ' + archiveMatch.license, subHref: archiveMatch.archiveUrl, art: t.big || t.art, small: t.art, seed: t.t }); toast('Playing openly licensed audio from Internet Archive · ' + archiveMatch.license); await playAudioSource(IA + '/download/' + enc(archiveMatch.id.slice(2)) + '/' + archiveMatch.file, tok); return; }
     } catch { /* fall back to Deezer preview */ }
     if (tok !== P.tok) return;
     if (!(await playPreview(t, tok, 'preview')) && tok === P.tok) failSkip('No full Audius or licensed Archive version or preview available for “' + t.t + '”', tok);
