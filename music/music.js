@@ -74,7 +74,7 @@
     cfg: Object.assign({ theme: matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light', autoplay: true, vol: 0.8, muted: false, panel: true }, store.get('cfg', {})),
   };
   const save = (...ks) => ks.forEach((k) => store.set(k, S[k]));
-  const slim = (t) => ({ id: t.id, src: t.src, t: t.t, a: t.a, aid: t.aid || '', al: t.al || '', alid: t.alid || '', art: t.art || '', big: t.big || '', d: t.d || 0, ex: !!t.ex, ver: !!t.ver, g: t.g || '' });
+  const slim = (t) => ({ id: t.id, src: t.src, t: t.t, a: t.a, aid: t.aid || '', al: t.al || '', alid: t.alid || '', art: t.art || '', big: t.big || '', d: t.d || 0, ex: !!t.ex, ver: !!t.ver, g: t.g || '', file: t.file || '', license: t.license || '', licenseUrl: t.licenseUrl || '', archiveUrl: t.archiveUrl || '' });
 
   function remember(item) {
     S.activity = [item, ...S.activity.filter((a) => !(a.k === item.k && a.id === item.id))].slice(0, 30);
@@ -186,6 +186,50 @@
     }
     throw new Error('Unknown request');
   }
+  /* --- Internet Archive: explicitly permissively licensed audio only --- */
+  const IA = 'https://archive.org';
+  const iaLicense = (url) => {
+    const u = String(url || '').toLowerCase();
+    if (u.includes('creativecommons.org/publicdomain/zero/1.0')) return 'CC0';
+    const m = u.match(/creativecommons\.org\/licenses\/(by-sa|by)\/([0-9.]+)/);
+    if (m) return (m[1] === 'by-sa' ? 'CC BY-SA ' : 'CC BY ') + m[2];
+    return '';
+  };
+  const iaText = (v) => Array.isArray(v) ? v.join(', ') : String(v || '');
+  const iaDuration = (v) => { if (!v) return 0; if (String(v).includes(':')) return String(v).split(':').reduce((n, p) => n * 60 + (+p || 0), 0); return Math.round(+v || 0); };
+  const iaFiles = (files) => {
+    const rank = { mp3: 0, m4a: 1, ogg: 2, oga: 2, opus: 3, flac: 4, wav: 5 };
+    return (files || []).filter((f) => { const m = String(f.name || '').match(/\.([a-z0-9]+)$/i); return m && Object.prototype.hasOwnProperty.call(rank, m[1].toLowerCase()) && f.source !== 'metadata' && (!f.size || +f.size < 250000000); })
+      .sort((a, b) => { const ext = (f) => String(f.name).split('.').pop().toLowerCase(); return rank[ext(a)] - rank[ext(b)] || (+a.size || 0) - (+b.size || 0); });
+  };
+  async function iaItem(doc, expectedArtist = '') {
+    const id = doc.identifier; if (!id) return null;
+    const meta = await cached('ia:item:' + id, () => getJSON(IA + '/metadata/' + enc(id)), 60 * 60e3);
+    const md = meta?.metadata || {}, licenseUrl = md.licenseurl || doc.licenseurl || '', license = iaLicense(licenseUrl);
+    if (!license) return null;
+    const creators = iaText(md.creator || doc.creator), title = iaText(md.title || doc.title).trim();
+    if (!title) return null;
+    const norm = (v) => String(v || '').toLowerCase().normalize('NFKD').replace(/[\\u0300-\\u036f]/g, '').replace(/[^a-z0-9 ]+/g, ' ').replace(/\\s+/g, ' ').trim();
+    if (expectedArtist) { const want = norm(expectedArtist), got = norm(creators); if (!got || (!got.includes(want) && !want.includes(got))) return null; }
+    const file = iaFiles(meta.files)[0]; if (!file) return null;
+    const name = file.name.split('/').map(encodeURIComponent).join('/'), ext = file.name.split('.').pop().toLowerCase();
+    if (['flac', 'wav'].includes(ext) && file.size && +file.size > 80000000) return null;
+    return { id: 'ia' + id, src: 'ia', t: title, a: creators || 'Internet Archive contributor', al: 'Internet Archive · ' + license, art: IA + '/services/img/' + enc(id), big: IA + '/services/img/' + enc(id), d: iaDuration(file.length || md.runtime), file: name, license, licenseUrl, archiveUrl: IA + '/details/' + enc(id) };
+  }
+  async function searchArchiveTracks(query, expectedArtist = '', limit = 12) {
+    const phrase = String(query || '').replace(/[\\\\\"]/g, ' ').replace(/\\s+/g, ' ').trim().slice(0, 100); if (!phrase) return [];
+    const q = 'mediatype:audio AND (title:"' + phrase + '" OR creator:"' + phrase + '")';
+    const url = IA + '/advancedsearch.php?q=' + enc(q) + '&fl[]=identifier&fl[]=title&fl[]=creator&fl[]=licenseurl&fl[]=mediatype&rows=' + Math.min(30, limit * 2) + '&page=1&output=json&sort[]=downloads+desc';
+    const result = await cached('ia:search:' + q, () => getJSON(url), 15 * 60e3), docs = result?.response?.docs || [];
+    const checked = await Promise.all(docs.slice(0, Math.min(10, limit * 2)).map((d) => iaItem(d, expectedArtist).catch(() => null)));
+    const seen = new Set(); return checked.filter((t) => t && !seen.has(t.id) && seen.add(t.id)).slice(0, limit);
+  }
+  async function findArchiveVersion(t) {
+    const tracks = await searchArchiveTracks(t.t, t.a, 10);
+    const norm = (v) => String(v || '').toLowerCase().normalize('NFKD').replace(/[\\u0300-\\u036f]/g, '').replace(/[^a-z0-9 ]+/g, ' ').replace(/\\s+/g, ' ').trim();
+    return tracks.find((x) => norm(x.t) === norm(t.t)) || tracks[0] || null;
+  }
+
   const AU = 'https://api.audius.co/v1', APP = 'app_name=ZZSound';
   const A = (p) => cached('a:' + p, async () => (await getJSON(`${AU}${p}${p.includes('?') ? '&' : '?'}${APP}`)).data);
   const auTrack = (x) => ({
@@ -316,13 +360,19 @@
     setBuffering(true); showPlayer(); markCurrent(); renderQueue(); bumpTaste(t);
     remember({ k: 'song', id: t.id, t: t.t, s: t.a, img: t.art, ref: slim(t) });
     if (t.src === 'au') { await playAudioSource(AU + '/tracks/' + t.id.slice(2) + '/stream?' + APP, tok); return; }
+    if (t.src === 'ia') { await playAudioSource(IA + '/download/' + enc(t.id.slice(2)) + '/' + t.file, tok); return; }
     try {
       const match = await findAudiusVersion(t);
       if (tok !== P.tok) return;
       if (match) { toast('Playing full track from Audius'); await playAudioSource(AU + '/tracks/' + match.id + '/stream?' + APP, tok); return; }
-    } catch { /* use Deezer preview when Audius has no match */ }
+    } catch { /* try Internet Archive next */ }
+    try {
+      const archiveMatch = await findArchiveVersion(t);
+      if (tok !== P.tok) return;
+      if (archiveMatch) { toast('Playing openly licensed audio from Internet Archive · ' + archiveMatch.license); await playAudioSource(IA + '/download/' + enc(archiveMatch.id.slice(2)) + '/' + archiveMatch.file, tok); return; }
+    } catch { /* fall back to Deezer preview */ }
     if (tok !== P.tok) return;
-    if (!(await playPreview(t, tok, 'preview')) && tok === P.tok) failSkip('No full Audius version or preview available for “' + t.t + '”', tok);
+    if (!(await playPreview(t, tok, 'preview')) && tok === P.tok) failSkip('No full Audius or licensed Archive version or preview available for “' + t.t + '”', tok);
   }
 
   // Deezer's 30-second preview, fetched fresh each time (preview links expire)
@@ -795,11 +845,12 @@
       return;
     }
     box.innerHTML = skelRows(8);
-    const [cat, au] = await Promise.allSettled([M('search?q=' + enc(q)), A(`/tracks/search?query=${enc(q)}&limit=15`)]);
+    const [cat, au, ia] = await Promise.allSettled([M('search?q=' + enc(q)), A(`/tracks/search?query=${enc(q)}&limit=15`), searchArchiveTracks(q, '', 12)]);
     if (tok !== searchTok) return;
     const j = cat.status === 'fulfilled' ? cat.value : { tracks: [], artists: [], albums: [] };
     const aut = au.status === 'fulfilled' ? (au.value || []).map(auTrack) : [];
-    if (!j.tracks.length && !j.artists.length && !aut.length) {
+    const iat = ia.status === 'fulfilled' ? ia.value : [];
+    if (!j.tracks.length && !j.artists.length && !aut.length && !iat.length) {
       box.innerHTML = cat.status === 'rejected' ? errBox(cat.reason) : emptyBox('No matches', 'Check the spelling or try the artist’s name.');
       return;
     }
@@ -811,6 +862,7 @@
       ${j.artists.length ? `<section class="sec">${secHead(++n, 'Artists')}<div class="hscroll">${j.artists.map(artistCard).join('')}</div></section>` : ''}
       ${j.albums.length ? `<section class="sec">${secHead(++n, 'Albums')}<div class="hscroll">${j.albums.map((a) => card({ href: `#/album/${a.id}`, img: a.art, title: a.t, sub: `${a.a}${a.year ? ' · ' + a.year : ''}`, play: `album:${a.id}` })).join('')}</div></section>` : ''}
       ${aut.length ? `<section class="sec">${secHead(++n, 'On Audius', 'Independent uploads')}${rows(aut)}</section>` : ''}`;
+      ${iat.length ? `<section class="sec">${secHead(++n, 'Internet Archive', 'Openly licensed recordings · CC0 / CC BY / CC BY-SA')}${rows(iat)}</section>` : ''}
     const sp = $('#srPlay'); if (sp) sp.onclick = () => { rememberSearch(q); playList(j.tracks.slice(0, 20), 0, { label: `Search · ${q}` }); };
     box.addEventListener('click', (e) => { if (e.target.closest('.row,.artist,.card,.jb')) rememberSearch(q); }, { once: true });
     markCurrent();
