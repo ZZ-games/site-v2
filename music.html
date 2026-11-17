@@ -149,7 +149,7 @@
         document.body.classList.add('games-overlay');
         shell.hidden = false;
         frame.src = 'games.html';
-        if (push) history.pushState({ zzGamesOverlay: true }, '', location.pathname + location.search + '#games');
+        if (push) history.pushState({ zzGamesOverlay: true }, '', location.pathname + location.search);
       }
       open?.addEventListener('click', (event) => { event.preventDefault(); openGames(); });
       window.addEventListener('popstate', closeGames);
