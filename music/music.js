@@ -209,7 +209,7 @@
     if (!license) return null;
     const creators = iaText(md.creator || doc.creator), title = iaText(md.title || doc.title).trim();
     if (!title) return null;
-    const norm = (v) => String(v || '').toLowerCase().normalize('NFKD').replace(/[\\u0300-\\u036f]/g, '').replace(/[^a-z0-9 ]+/g, ' ').replace(/\\s+/g, ' ').trim();
+    const norm = (v) => String(v || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]+/g, ' ').replace(/\\s+/g, ' ').trim();
     if (expectedArtist) { const want = norm(expectedArtist), got = norm(creators); if (!got || (!got.includes(want) && !want.includes(got))) return null; }
     const file = iaFiles(meta.files)[0]; if (!file) return null;
     const name = file.name.split('/').map(encodeURIComponent).join('/'), ext = file.name.split('.').pop().toLowerCase();
@@ -226,7 +226,7 @@
   }
   async function findArchiveVersion(t) {
     const tracks = await searchArchiveTracks(t.t, t.a, 10);
-    const norm = (v) => String(v || '').toLowerCase().normalize('NFKD').replace(/[\\u0300-\\u036f]/g, '').replace(/[^a-z0-9 ]+/g, ' ').replace(/\\s+/g, ' ').trim();
+    const norm = (v) => String(v || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]+/g, ' ').replace(/\\s+/g, ' ').trim();
     return tracks.find((x) => norm(x.t) === norm(t.t)) || tracks[0] || null;
   }
 
@@ -333,7 +333,7 @@
   audio.addEventListener('waiting', () => { if (P.eng === 'audio') setBuffering(true); });
   audio.addEventListener('ended', () => { if (P.eng === 'audio') onEnded(); });
   audio.addEventListener('error', () => { if (P.eng === 'audio' && audio.getAttribute('src')) { setBuffering(false); failSkip('Track failed — skipping'); } });
-  const normAudio = (v) => String(v || '').toLowerCase().normalize('NFKD').replace(/[\\u0300-\\u036f]/g, '').replace(/[^a-z0-9 ]+/g, ' ').replace(/\\s+/g, ' ').trim();
+  const normAudio = (v) => String(v || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]+/g, ' ').replace(/\\s+/g, ' ').trim();
   async function findAudiusVersion(t) {
     const found = await A('/tracks/search?query=' + enc([t.a, t.t].filter(Boolean).join(' ')) + '&limit=25');
     const title = normAudio(t.t), artist = normAudio(t.a);
