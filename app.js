@@ -3,7 +3,13 @@
 const slug = (t) => t.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 GAMES.forEach((g) => {
   g.id = slug(g.title);
-  if (!g.url && g.repo) g.url = `https://${(g.user || SITE.githubUser).toLowerCase()}.github.io/${g.repo}/`;
+  if (g.repo) {
+    const base = `https://${(g.user || SITE.githubUser).toLowerCase()}.github.io/${g.repo}/`;
+    // Older entries used paths inside a non-existent /games folder on the site.
+    // Resolve those to the actual game's GitHub Pages repository instead.
+    if (!g.url) g.url = base;
+    else if (g.url.startsWith("games/")) g.url = base + g.url.replace(/^games\/[^/]+\/?/, "");
+  }
 });
 
 // Colorful generated cover when a game has no image
@@ -494,18 +500,10 @@ function initPlay() {
   const loader = document.getElementById("loader");
   const startWatch = hookGameAudio(frame);
 
-  // Games in the games/ folder: if this copy of the site doesn't have that folder
-  // (e.g. a test copy), load it from the live site instead.
-  const resolved = {};
+  // Every repository-backed game URL is resolved to its own GitHub Pages site above.
+  // Do not fall back to site-v2: it does not contain a /games directory.
   function gameSrc(url) {
-    if (!/^games\//.test(url) || !SITE.liveSite) return Promise.resolve(url);
-    if (resolved[url]) return Promise.resolve(resolved[url]);
-    const live = SITE.liveSite.replace(/\/?$/, "/") + url;
-    if (new URL(live).origin === location.origin) return Promise.resolve(url);
-    const check = new URL(url.split("?")[0], location.href).href;
-    return fetch(check, { method: "HEAD", cache: "no-store" })
-      .then((r) => (r.ok ? url : live), () => live)
-      .then((u) => (resolved[url] = u));
+    return Promise.resolve(url);
   }
   function load() {
     if (!g.url) return;
