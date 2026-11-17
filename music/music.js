@@ -1,13 +1,5 @@
 'use strict';
-/* ZZ Games Music.
-   Sources: Deezer catalog (via api/music, played through YouTube), Audius (free full streams),
-   Radio Browser (live stations), YouTube live (lofi). Everything personal lives in localStorage.
-
-   FULL SONGS ON GITHUB PAGES (optional): GitHub Pages can't run the api/music backend, so chart
-   songs fall back to 30-second previews. To get full songs there, create a YouTube Data API v3 key
-   in Google Cloud, restrict it to "Websites" -> https://zz-games.github.io/*, and paste it below.
-   The free quota covers roughly 100 new song lookups a day (each found song is remembered). */
-const YT_KEY = 'AIzaSyCZ2vIxFir0cgT1RdAMeow60_IsPGfIJX8';
+/* ZZ Games Music: Deezer catalogue/previews and Audius full-length streams. */
 (() => {
   /* ================= helpers ================= */
   const $ = (s, r = document) => r.querySelector(s);
@@ -125,7 +117,7 @@ const YT_KEY = 'AIzaSyCZ2vIxFir0cgT1RdAMeow60_IsPGfIJX8';
   let NOAPI = FILE;
   function markNoapi() {
     NOAPI = true;
-    if (!store.get('noteX', false) && !YT_KEY) $('#previewNote').hidden = false;
+    if (!store.get('noteX', false)) $('#previewNote').hidden = false;
   }
   const M = (p, fresh) => cached('m:' + p + (fresh ? Math.random() : ''), async () => {
     if (!NOAPI) {
@@ -154,7 +146,7 @@ const YT_KEY = 'AIzaSyCZ2vIxFir0cgT1RdAMeow60_IsPGfIJX8';
   }
   const dzTrack = (x, alb) => {
     const al = alb || x.album || {};
-    return { id: 'dz' + x.id, src: 'yt', t: x.title, a: x.artist?.name || '', aid: x.artist?.id ? 'dz' + x.artist.id : '', al: al.title || '', alid: al.id ? 'dz' + al.id : '', art: al.cover_medium || '', big: al.cover_xl || al.cover_big || '', d: x.duration || 0, ex: !!x.explicit_lyrics };
+    return { id: 'dz' + x.id, src: 'dz', t: x.title, a: x.artist?.name || '', aid: x.artist?.id ? 'dz' + x.artist.id : '', al: al.title || '', alid: al.id ? 'dz' + al.id : '', art: al.cover_medium || '', big: al.cover_xl || al.cover_big || '', d: x.duration || 0, ex: !!x.explicit_lyrics };
   };
   const dzArtist = (a) => ({ id: 'dz' + a.id, name: a.name, pic: a.picture_medium || '', big: a.picture_xl || a.picture_big || '', fans: a.nb_fan || 0 });
   const dzAlbum = (a, who) => ({ id: 'dz' + a.id, t: a.title, a: a.artist?.name || who || '', art: a.cover_medium || '', big: a.cover_xl || '', year: (a.release_date || '').slice(0, 4), type: a.record_type || 'album' });
@@ -317,149 +309,47 @@ const YT_KEY = 'AIzaSyCZ2vIxFir0cgT1RdAMeow60_IsPGfIJX8';
   /* ================= player engine ================= */
   const audio = new Audio();
   audio.preload = 'auto';
-  const yt = { p: null, ready: null };
-  const P = { q: [], i: -1, orig: null, shuffle: store.get('shuf', false), repeat: store.get('rep', 0), mode: null, cur: null, eng: null, tok: 0, ids: [], idi: 0, station: null, stream: null, label: '', playing: false };
-
-  function loadYTApi() {
-    if (window.YT?.Player) return Promise.resolve();
-    return (loadYTApi.p ??= new Promise((res, rej) => {
-      const prev = window.onYouTubeIframeAPIReady;
-      window.onYouTubeIframeAPIReady = () => { prev?.(); res(); };
-      const s = document.createElement('script');
-      s.src = 'https://www.youtube.com/iframe_api';
-      s.onerror = () => { loadYTApi.p = null; rej(new Error('YouTube is blocked on this network')); };
-      document.head.append(s);
-      setTimeout(() => rej(new Error('YouTube took too long to load')), 15000);
-    }));
-  }
-  function ytPlayer() {
-    return (yt.ready ??= loadYTApi().then(() => new Promise((res) => {
-      yt.p = new YT.Player('dockFrame', {
-        host: 'https://www.youtube-nocookie.com', width: '100%', height: '100%',
-        playerVars: { autoplay: 1, controls: 1, playsinline: 1, rel: 0, iv_load_policy: 3, disablekb: 0, fs: 1, origin: location.origin },
-        events: { onReady: () => { applyVol(); res(yt.p); }, onStateChange: (e) => ytState(e.data), onError: (e) => ytError(e.data) },
-      });
-    })).catch((e) => { yt.ready = null; throw e; }));
-  }
-  function stopEngines() {
-    audio.pause();
-    if (audio.getAttribute('src')) { audio.removeAttribute('src'); audio.load(); }
-    try { yt.p?.stopVideo?.(); } catch { /* not ready */ }
-  }
-  function ytState(s) {
-    if (P.eng !== 'yt') return;
-    if (s === 1) { setPlaying(true); setBuffering(false); }
-    else if (s === 2) setPlaying(false);
-    else if (s === 3) setBuffering(true);
-    else if (s === 0) onEnded();
-  }
-  function ytError() {
-    if (P.eng !== 'yt') return;
-    if (P.mode === 'stream') { toast('That stream is offline right now'); setBuffering(false); return; }
-    if (++P.idi < P.ids.length) { yt.p.loadVideoById(P.ids[P.idi]); return; }
-    const tok = P.tok, t = P.cur;
-    if (t?.id.startsWith('dz')) { playPreview(t, tok, 'nomatch').then((ok) => { if (!ok && tok === P.tok) failSkip('Not playable here — skipping', tok); }); return; }
-    failSkip('Not playable here — skipping', tok);
-  }
+  const P = { q: [], i: -1, orig: null, shuffle: store.get('shuf', false), repeat: store.get('rep', 0), mode: null, cur: null, eng: 'audio', tok: 0, station: null, stream: null, label: '', playing: false };
+  function stopEngines() { audio.pause(); audio.removeAttribute('src'); audio.load(); }
   audio.addEventListener('playing', () => { if (P.eng === 'audio') { setPlaying(true); setBuffering(false); } });
   audio.addEventListener('pause', () => { if (P.eng === 'audio') setPlaying(false); });
   audio.addEventListener('waiting', () => { if (P.eng === 'audio') setBuffering(true); });
   audio.addEventListener('ended', () => { if (P.eng === 'audio') onEnded(); });
-  audio.addEventListener('error', () => {
-    if (P.eng !== 'audio' || !audio.getAttribute('src')) return;
-    setBuffering(false);
-    if (P.mode === 'radio') { toast('That station went quiet — try another'); setPlaying(false); return; }
-    failSkip('Track failed — skipping');
-  });
-
+  audio.addEventListener('error', () => { if (P.eng === 'audio' && audio.getAttribute('src')) { setBuffering(false); failSkip('Track failed — skipping'); } });
+  const normAudio = (v) => String(v || '').toLowerCase().normalize('NFKD').replace(/[\\u0300-\\u036f]/g, '').replace(/[^a-z0-9 ]+/g, ' ').replace(/\\s+/g, ' ').trim();
+  async function findAudiusVersion(t) {
+    const found = await A('/tracks/search?query=' + enc([t.a, t.t].filter(Boolean).join(' ')) + '&limit=25');
+    const title = normAudio(t.t), artist = normAudio(t.a);
+    let best = null, scoreBest = 0;
+    for (const x of found || []) {
+      const xt = normAudio(x.title), xa = normAudio(x.user?.name);
+      const titleOK = xt === title || xt.includes(title) || title.includes(xt);
+      const artistOK = !artist || xa === artist || xa.includes(artist) || artist.includes(xa);
+      const score = (xt === title ? 5 : titleOK ? 3 : 0) + (artistOK ? 3 : 0) + (x.is_streamable === false ? -10 : 0);
+      if (score > scoreBest) { best = x; scoreBest = score; }
+    }
+    return scoreBest >= 6 ? best : null;
+  }
+  async function playAudioSource(url, tok) {
+    if (tok !== P.tok) return;
+    P.eng = 'audio'; audio.src = url;
+    try { await audio.play(); } catch { if (tok === P.tok) { setBuffering(false); setPlaying(false); } }
+  }
   async function playTrack(t) {
     const tok = ++P.tok;
     P.cur = t; P.mode = 'song'; P.station = null; P.stream = null;
     stopEngines();
-    setNow({ title: t.t, sub: t.a, subHref: t.aid ? `#/artist/${t.aid}` : '', art: t.big || t.art, small: t.art, seed: t.t });
-    setBuffering(true); showPlayer(); markCurrent(); renderQueue();
-    bumpTaste(t);
+    setNow({ title: t.t, sub: t.a, subHref: t.aid ? '#/artist/' + t.aid : '', art: t.big || t.art, small: t.art, seed: t.t });
+    setBuffering(true); showPlayer(); markCurrent(); renderQueue(); bumpTaste(t);
     remember({ k: 'song', id: t.id, t: t.t, s: t.a, img: t.art, ref: slim(t) });
-    if (t.src === 'au') {
-      P.eng = 'audio'; paintVideoBtn();
-      audio.src = `${AU}/tracks/${t.id.slice(2)}/stream?${APP}`;
-      audio.play().catch(() => setPlaying(false));
-      return;
-    }
-    P.eng = 'yt'; setVideo(true); paintVideoBtn();
-    if (FILE || (NOAPI && !YT_KEY)) { // no way to find the full song on YouTube: play Deezer's preview
-      if (!(await playPreview(t, tok, FILE ? 'file' : 'noapi')) && tok === P.tok) failSkip(`Couldn't play “${t.t}” — skipping`, tok);
-      return;
-    }
+    if (t.src === 'au') { await playAudioSource(AU + '/tracks/' + t.id.slice(2) + '/stream?' + APP, tok); return; }
     try {
-      const ids = await resolveYT(t);
+      const match = await findAudiusVersion(t);
       if (tok !== P.tok) return;
-      P.ids = ids; P.idi = 0;
-      if (!P.ids.length) throw new Error('no match');
-      const pl = await ytPlayer();
-      if (tok !== P.tok) return;
-      pl.loadVideoById(P.ids[0]);
-    } catch (e) {
-      if (tok !== P.tok) return;
-      if (t.id.startsWith('dz') && (await playPreview(t, tok, 'nomatch'))) return;
-      if (tok !== P.tok) return;
-      setBuffering(false);
-      failSkip(/blocked|long/.test(e.message) ? e.message : `Couldn't find “${t.t}” — skipping`, tok);
-    }
-  }
-
-  /* --- finding the full song on YouTube --- */
-  const ytCache = store.get('ytc', {});
-  async function resolveYT(t) {
-    if (ytCache[t.id]) return ytCache[t.id];
-    let ids = [];
-    if (!NOAPI) {
-      try {
-        const q = new URLSearchParams({ t: t.t, a: t.a, al: t.al || '', d: t.d || 0 });
-        const r = await fetch('api/music/yt?' + q, { signal: AbortSignal.timeout(20000) });
-        if ((r.headers.get('content-type') || '').includes('json')) { if (r.ok) ids = (await r.json()).ids || []; }
-        else markNoapi();
-      } catch { /* backend unreachable */ }
-    }
-    if (!ids.length && YT_KEY) { try { ids = await ytBrowser(t); } catch { /* quota or network */ } }
-    if (ids.length) {
-      ytCache[t.id] = ids;
-      const keys = Object.keys(ytCache); if (keys.length > 600) keys.slice(0, 100).forEach((k) => delete ytCache[k]);
-      store.set('ytc', ytCache);
-    }
-    return ids;
-  }
-  const normT = (s) => String(s).toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/\((?:feat|ft|with)[^)]*\)|\[(?:feat|ft|with)[^\]]*\]/g, ' ').replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
-  const isoSecs = (s) => { const m = String(s).match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/); return m ? (+m[1] || 0) * 3600 + (+m[2] || 0) * 60 + (+m[3] || 0) : 0; };
-  const BADW = ['live', 'cover', 'remix', 'sped up', 'slowed', 'reverb', '8d', 'karaoke', 'instrumental', 'nightcore', 'reaction', '1 hour', 'loop', 'mashup', 'acoustic', 'tutorial', 'lesson', 'bass boosted', 'edit'];
-  function matchScore(c, t) {
-    const T = normT(t.t), A = normT(t.a.split(/,|&| x | feat\.? | ft\.? /i)[0]), title = normT(c.title), ch = normT(c.channel);
-    let s = 0;
-    if (/ - topic$/i.test(c.channel) && ch.includes(A)) s += 10;
-    else if (ch.replace(/ /g, '').includes(A.replace(/ /g, ''))) s += 4;
-    if (/vevo$/i.test(c.channel)) s += 3;
-    if (title.includes(T)) s += 4;
-    else { const w = T.split(' ').filter((x) => x.length > 1); s += w.length ? 3 * w.filter((x) => title.includes(x)).length / w.length : 0; }
-    if (title.includes(A)) s += 1;
-    if (/official audio/i.test(c.title)) s += 1.5;
-    for (const b of BADW) if (title.includes(b) && !T.includes(b)) s -= 5;
-    if (t.d && c.d) { const diff = Math.abs(c.d - t.d); s += diff <= 3 ? 4 : diff <= 10 ? 2 : diff <= 25 ? 0 : diff <= 90 ? -4 : -9; }
-    if (!c.d) s -= 6;
-    return s;
-  }
-  const decodeHtml = (s) => { const d = document.createElement('textarea'); d.innerHTML = s; return d.value; };
-  async function ytBrowser(t) {
-    const G = 'https://www.googleapis.com/youtube/v3/';
-    const s = await getJSON(`${G}search?part=snippet&type=video&videoEmbeddable=true&maxResults=8&q=${enc(t.a + ' ' + t.t)}&key=${YT_KEY}`);
-    const items = s.items || [];
-    if (!items.length) return [];
-    const v = await getJSON(`${G}videos?part=contentDetails&id=${items.map((i) => i.id.videoId).join(',')}&key=${YT_KEY}`);
-    const dur = new Map((v.items || []).map((i) => [i.id, isoSecs(i.contentDetails?.duration)]));
-    const ranked = items.map((i) => ({ id: i.id.videoId, title: decodeHtml(i.snippet.title), channel: i.snippet.channelTitle, d: dur.get(i.id.videoId) || 0 }))
-      .map((c) => ({ ...c, s: matchScore(c, t) })).sort((a, b) => b.s - a.s);
-    const good = ranked.filter((c) => c.s >= 4);
-    return (good.length ? good : ranked).slice(0, 3).map((c) => c.id);
+      if (match) { toast('Playing full track from Audius'); await playAudioSource(AU + '/tracks/' + match.id + '/stream?' + APP, tok); return; }
+    } catch { /* use Deezer preview when Audius has no match */ }
+    if (tok !== P.tok) return;
+    if (!(await playPreview(t, tok, 'preview')) && tok === P.tok) failSkip('No full Audius version or preview available for “' + t.t + '”', tok);
   }
 
   // Deezer's 30-second preview, fetched fresh each time (preview links expire)
@@ -469,13 +359,13 @@ const YT_KEY = 'AIzaSyCZ2vIxFir0cgT1RdAMeow60_IsPGfIJX8';
       const x = await dzp('/track/' + t.id.slice(2));
       if (tok !== P.tok) return true;
       if (!x.preview) return false;
-      P.eng = 'audio'; paintVideoBtn();
+      P.eng = 'audio';
       $('#liveTag').textContent = 'Preview'; $('#liveTag').hidden = false;
       audio.src = x.preview;
       audio.play().catch(() => setPlaying(false));
       if (!previewNoted || why === 'nomatch') {
         previewNoted = true;
-        toast(why === 'nomatch' ? 'Full song not found — playing a 30-second preview' : 'Playing a 30-second preview');
+        toast('No Audius version found — playing a 30-second preview');
       }
       return true;
     } catch { return false; }
@@ -557,45 +447,18 @@ const YT_KEY = 'AIzaSyCZ2vIxFir0cgT1RdAMeow60_IsPGfIJX8';
     P.q.push(...tracks); P.orig?.push(...tracks); renderQueue(); toast(tracks.length > 1 ? `Added ${tracks.length} songs to the queue` : 'Added to the queue');
   }
 
-  function playStation(st) {
-    ++P.tok; stopEngines();
-    P.mode = 'radio'; P.station = st; P.cur = null; P.eng = 'audio'; P.q = []; P.i = -1;
-    setNow({ title: st.name, sub: [st.cc, st.br ? `${st.br} kbps` : '', 'Live radio'].filter(Boolean).join(' · '), art: st.art, small: st.art, seed: st.name, live: true });
-    setBuffering(true); showPlayer(); paintVideoBtn(); setVideo(false);
-    audio.src = st.url;
-    audio.play().catch(() => { setBuffering(false); toast('Press play to start the station'); });
-    S.tuned = [slimSt(st), ...S.tuned.filter((x) => x.id !== st.id)].slice(0, 12); save('tuned');
-    markCurrent(); renderQueue();
-  }
-  async function playStream(s) {
-    if (FILE) { toast('Lofi streams need the site online — YouTube won’t play in a file you opened directly'); return; }
-    const tok = ++P.tok; stopEngines();
-    P.mode = 'stream'; P.stream = s; P.cur = null; P.eng = 'yt'; P.q = []; P.i = -1;
-    setNow({ title: s[1], sub: s[2] + ' · Live', art: `https://i.ytimg.com/vi/${s[0]}/hqdefault.jpg`, seed: s[1], live: true });
-    showPlayer(); setVideo(true); setBuffering(true); paintVideoBtn(); markCurrent(); renderQueue();
-    try { const pl = await ytPlayer(); if (tok !== P.tok) return; pl.loadVideoById(s[0]); }
-    catch (e) { setBuffering(false); toast(e.message); }
-  }
 
-  function toggle() {
-    if (!P.mode) return;
-    if (P.eng === 'audio') { if (audio.paused) audio.play().catch(() => {}); else audio.pause(); }
-    else if (yt.p?.getPlayerState) { const s = yt.p.getPlayerState(); if (s === 1 || s === 3) yt.p.pauseVideo(); else yt.p.playVideo(); }
-  }
-  function pause() { if (P.eng === 'audio') audio.pause(); else yt.p?.pauseVideo?.(); }
-  const position = () => (P.eng === 'audio' ? audio.currentTime || 0 : yt.p?.getCurrentTime?.() || 0);
-  const duration = () => { if (P.mode !== 'song') return 0; const d = P.eng === 'audio' ? audio.duration : yt.p?.getDuration?.(); return isFinite(d) && d > 0 ? d : P.cur?.d || 0; };
-  function seek(s) { if (P.mode !== 'song') return; if (P.eng === 'audio') audio.currentTime = s; else yt.p?.seekTo?.(s, true); }
-  function applyVol() {
-    audio.volume = S.cfg.muted ? 0 : S.cfg.vol;
-    if (yt.p?.setVolume) { yt.p.setVolume(Math.round(S.cfg.vol * 100)); S.cfg.muted ? yt.p.mute() : yt.p.unMute(); }
-    $('#vol').value = Math.round(S.cfg.vol * 100);
-    $('#muteBtn').innerHTML = ic(S.cfg.muted || S.cfg.vol === 0 ? 'mute' : 'vol');
-  }
+  function toggle() { if (!P.mode) return; if (audio.paused) audio.play().catch(() => {}); else audio.pause(); }
+  function pause() { audio.pause(); }
+  const position = () => audio.currentTime || 0;
+  const duration = () => { if (P.mode !== 'song') return 0; const d = audio.duration; return isFinite(d) && d > 0 ? d : P.cur?.d || 0; };
+  function seek(s) { if (P.mode === 'song' && isFinite(audio.duration)) audio.currentTime = s; }
+  function applyVol() { audio.volume = S.cfg.muted ? 0 : S.cfg.vol; $('#vol').value = Math.round(S.cfg.vol * 100); $('#muteBtn').innerHTML = ic(S.cfg.muted || S.cfg.vol === 0 ? 'mute' : 'vol'); }
+
   function closePlayer() {
     ++P.tok; stopEngines();
     P.mode = null; P.cur = null; P.q = []; P.i = -1; P.station = null; P.stream = null;
-    setVideo(false); setPlaying(false); setBuffering(false);
+    setPlaying(false); setBuffering(false);
     $('#bar').hidden = true; document.body.classList.remove('playing-bar');
     drawer(false);
     markCurrent(); renderQueue();
@@ -613,7 +476,6 @@ const YT_KEY = 'AIzaSyCZ2vIxFir0cgT1RdAMeow60_IsPGfIJX8';
     $('#bar').classList.toggle('live', live);
     $('#liveTag').textContent = 'On air';
     $('#liveTag').hidden = !live;
-    $('#dockTitle').textContent = title;
     tint(small || big, seed);
     paintNowLike();
     $$('[data-act=shuffle],[data-act=repeat],[data-act=prev],[data-act=next]').forEach((b) => (b.disabled = live));
@@ -657,11 +519,6 @@ const YT_KEY = 'AIzaSyCZ2vIxFir0cgT1RdAMeow60_IsPGfIJX8';
     const on = !!(P.cur && isLiked(P.cur));
     ['#npLike', '#barLike'].forEach((s) => $(s).classList.toggle('on', on));
   }
-  function paintVideoBtn() {
-    const can = P.eng === 'yt';
-    ['#videoBtn', '#npVideo'].forEach((s) => { $(s).disabled = !can; $(s).classList.toggle('on', can && !$('#dock').classList.contains('off')); });
-  }
-  function setVideo(on) { $('#dock').classList.toggle('off', !on); if (!on) $('#dock').classList.remove('big'); paintVideoBtn(); }
   function paintPanel() { $('#panelBtn').classList.toggle('on', $('#np').classList.contains('open')); }
   function drawer(on) {
     $('#np').classList.toggle('open', on);
@@ -1248,9 +1105,6 @@ const YT_KEY = 'AIzaSyCZ2vIxFir0cgT1RdAMeow60_IsPGfIJX8';
   $('#npLike').onclick = $('#barLike').onclick = () => toggleLike(P.cur);
   $('#npAdd').onclick = (e) => { if (P.cur) addMenu(e.currentTarget, [P.cur]); };
   $('#npRadio').onclick = () => { if (P.cur) songRadio(P.cur); };
-  $('#videoBtn').onclick = $('#npVideo').onclick = () => { if (P.eng === 'yt') setVideo($('#dock').classList.contains('off')); };
-  $('#dockHide').onclick = () => toast('The YouTube player stays visible while a song is playing.');
-  $('#dockSize').onclick = () => $('#dock').classList.toggle('big');
   $('#stopBtn').onclick = closePlayer;
   $('#qClear').onclick = () => { P.q = P.q.slice(0, P.i + 1); P.orig = P.q.slice(); renderQueue(); toast('Queue cleared'); };
   $('#vol').oninput = (e) => { S.cfg.vol = e.target.value / 100; S.cfg.muted = false; applyVol(); save('cfg'); };
@@ -1284,7 +1138,7 @@ const YT_KEY = 'AIzaSyCZ2vIxFir0cgT1RdAMeow60_IsPGfIJX8';
 
   /* ================= boot ================= */
   if (FILE) markNoapi();
-  applyVol(); paintModes(); paintAuto(); setVideo(false); setPlaying(false);
+  applyVol(); paintModes(); paintAuto(); setPlaying(false);
   const q0 = new URLSearchParams(location.search).get('q');
   if (q0 && !location.hash) location.hash = '#/search?q=' + enc(q0.slice(0, 80));
   route();
