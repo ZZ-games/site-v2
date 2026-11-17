@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Music · ZZ Games</title>
+  <script>document.title = "ZZ Classroom";</script>
+  <script src="zz-guard.js?v=202611170"></script>
+  <link rel="icon" type="image/svg+xml" href="images/tab/classroom.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="images/tab/classroom-32.png">
+  <link rel="icon" type="image/png" sizes="48x48" href="images/tab/classroom-48.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="images/tab/classroom-192.png">
+  <meta name="description" content="Free music on ZZ Games: charts, search, mood mixes, playlists, live radio and lofi streams.">
+  <meta name="theme-color" content="#020414">
+  <link rel="stylesheet" href="fonts/fonts.css">
+  <link rel="stylesheet" href="music/music.css?v=202611170">
+  <link rel="stylesheet" href="zz-fx.css?v=202611176">
+  <link rel="expect" href="#fxReady" blocking="render">
+</head>
+<body class="music">
+  <div class="m-top">
+    <div class="m-grid" aria-hidden="true"></div>
+    <header class="m-nav" id="mnav">
+      <a href="index.html" class="m-logo"><img src="images/logo-flat.png?v=2" alt="ZZ Games"></a>
+      <span class="fx-pill" aria-hidden="true"></span>
+      <nav class="m-links" aria-label="Main">
+        <a href="games.html">Games</a>
+        <a href="music.html" class="on">Music</a>
+        <a href="watch.html?type=movie&id=popular">Movies</a>
+        <a href="watch.html?type=tv&id=popular">TV</a>
+        <a href="ai.html">AI</a>
+      </nav>
+      <i id="fxReady" hidden></i>
+    </header>
+
+    <section class="m-hero" id="mhero">
+      <p class="m-eyebrow" id="mGreet">Music</p>
+      <h1 class="m-title m-banner-title"><img src="images/banner-music.png" alt="Music"></h1>
+      <p class="m-tag">Put something on while you play. Charts, radio and lofi.</p>
+      <form class="m-search" id="mfind" role="search">
+        <label class="sr-only" for="mq">Search music</label>
+        <i data-ic="search"></i>
+        <input id="mq" type="search" placeholder="Search songs, artists and albums" autocomplete="off">
+        <kbd aria-hidden="true">/</kbd>
+      </form>
+      <div class="m-channels" id="mchans" role="group" aria-label="Music sections">
+        <a class="m-panel" href="#/" data-nav="home">
+          <span class="m-panel-top"><i data-ic="compass"></i><span class="m-go"><i data-ic="play"></i></span></span>
+          <span class="m-panel-txt"><b>Discover</b><span>Picks tuned to you, the chart and community playlists.</span></span>
+        </a>
+        <a class="m-panel" href="#/library" data-nav="library">
+          <span class="m-panel-top"><i data-ic="crate"></i><span class="m-go"><i data-ic="play"></i></span></span>
+          <span class="m-panel-txt"><b>Playlists</b><span>Your playlists, liked songs and artists you follow.</span></span>
+        </a>
+        <a class="m-panel" href="#/radio" data-nav="radio">
+          <span class="m-panel-top"><i data-ic="radio"></i><span class="m-go"><i data-ic="play"></i></span></span>
+          <span class="m-panel-txt"><b>Radio</b><span>Thousands of live stations from around the world.</span></span>
+        </a>
+        <a class="m-panel" href="#/lofi" data-nav="lofi">
+          <span class="m-panel-top"><i data-ic="moon"></i><span class="m-go"><i data-ic="play"></i></span></span>
+          <span class="m-panel-txt"><b>Lofi</b><span>24/7 beats that keep going while you browse.</span></span>
+        </a>
+      </div>
+    </section>
+  </div>
+
+  <div class="m-note" id="previewNote" hidden>
+    <i data-ic="wave"></i>
+    <span><b>Preview mode.</b> Chart songs play as 30-second previews on this host. Audius songs, mood mixes, radio and lofi play in full.</span>
+    <button class="ib sm" id="noteX" aria-label="Dismiss"><i data-ic="close"></i></button>
+  </div>
+
+  <main class="m-main" id="main"><div class="view" id="view"></div></main>
+
+  <aside class="np" id="np" aria-label="Now playing">
+    <div class="np-head"><span class="eyebrow">Now playing</span><button class="ib" id="npClose" aria-label="Close"><i data-ic="close"></i></button></div>
+    <div class="np-art"><img id="npArt" alt=""></div>
+    <div class="np-meta"><h2 id="npTitle">Nothing yet</h2><p id="npSub">Pick something to play</p></div>
+    <div class="np-actions">
+      <button class="ib" id="npLike" aria-label="Like"><i data-ic="heart"></i></button>
+      <button class="ib" id="npAdd" aria-label="Add to a playlist"><i data-ic="plus"></i></button>
+      <button class="ib" id="npRadio" aria-label="Start song radio"><i data-ic="wave"></i></button>
+      <button class="ib" id="npVideo" aria-label="Show video"><i data-ic="video"></i></button>
+      <button class="pill-btn" id="autoBtn" title="When a queue ends, keep playing similar songs">Autoplay</button>
+    </div>
+    <div class="np-mobile-ctl">
+      <div class="np-seek"><span id="npCur">0:00</span><input type="range" id="npSeek" min="0" max="1000" value="0" aria-label="Seek"><span id="npDur">0:00</span></div>
+      <div class="ctl big">
+        <button class="ib" data-act="shuffle" aria-label="Shuffle"><i data-ic="shuffle"></i></button>
+        <button class="ib" data-act="prev" aria-label="Previous"><i data-ic="prev"></i></button>
+        <button class="playbtn" data-act="toggle" aria-label="Play or pause"><i data-ic="play"></i></button>
+        <button class="ib" data-act="next" aria-label="Next"><i data-ic="next"></i></button>
+        <button class="ib" data-act="repeat" aria-label="Repeat"><i data-ic="repeat"></i></button>
+      </div>
+    </div>
+    <div class="np-qh"><span class="eyebrow" id="qLabel">Up next</span><button class="link" id="qClear">Clear</button></div>
+    <div class="np-q" id="npQueue"></div>
+  </aside>
+  <div class="np-scrim" id="npScrim"></div>
+
+  <div class="bar" id="bar" hidden>
+    <div class="bar-prog"><div class="bar-fill" id="seekFill"></div><input type="range" id="seek" min="0" max="1000" value="0" aria-label="Seek"></div>
+    <button class="bar-now" id="barNow" aria-label="Open now playing">
+      <span class="bar-art"><img id="barArt" alt=""></span>
+      <span class="bar-txt"><b id="barTitle"></b><span id="barSub"></span></span>
+    </button>
+    <button class="ib bar-like" id="barLike" aria-label="Like"><i data-ic="heart"></i></button>
+    <div class="bar-mid">
+      <div class="ctl">
+        <button class="ib" data-act="shuffle" aria-label="Shuffle"><i data-ic="shuffle"></i></button>
+        <button class="ib" data-act="prev" aria-label="Previous"><i data-ic="prev"></i></button>
+        <button class="playbtn" data-act="toggle" aria-label="Play or pause"><i data-ic="play"></i></button>
+        <button class="ib" data-act="next" aria-label="Next"><i data-ic="next"></i></button>
+        <button class="ib" data-act="repeat" aria-label="Repeat"><i data-ic="repeat"></i></button>
+      </div>
+      <div class="bar-time"><span id="tCur">0:00</span><i>/</i><span id="tDur">0:00</span><em id="liveTag" hidden>On air</em></div>
+    </div>
+    <div class="bar-side">
+      <button class="ib" id="sleepBtn" aria-label="Sleep timer"><i data-ic="clock"></i></button>
+      <button class="ib" id="videoBtn" aria-label="Show video"><i data-ic="video"></i></button>
+      <button class="ib" id="panelBtn" aria-label="Up next"><i data-ic="queue"></i></button>
+      <button class="ib" id="muteBtn" aria-label="Mute"><i data-ic="vol"></i></button>
+      <input type="range" id="vol" min="0" max="100" aria-label="Volume">
+      <button class="ib" id="stopBtn" aria-label="Stop and close"><i data-ic="close"></i></button>
+    </div>
+  </div>
+
+  <div class="dock off" id="dock">
+    <div class="dock-head"><span id="dockTitle">Video</span><button class="ib sm" id="dockSize" aria-label="Resize video"><i data-ic="expand"></i></button><button class="ib sm" id="dockHide" aria-label="Hide video"><i data-ic="close"></i></button></div>
+    <div class="dock-frame"><div id="dockFrame"></div></div>
+  </div>
+
+  <div class="menu" id="menu" hidden></div>
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+  <dialog id="dlg"></dialog>
+  <script src="music/music.js?v=202611170"></script>
+  <script src="zz-fx.js?v=202611176"></script>
+</body>
+</html>

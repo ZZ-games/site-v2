@@ -1,0 +1,157 @@
+/* Watch page styles — uses the site's existing CSS variables */
+
+.watch-main { padding: 0 clamp(16px, 4vw, 40px) 40px; max-width: 1100px; margin: 0 auto; }
+
+/* Loading / Error */
+.watch-loading, .watch-error { display: grid; place-items: center; min-height: 50vh; color: var(--muted); text-align: center; }
+.watch-error .btn { margin-top: 12px; }
+/* display:grid above overrides the [hidden] attribute — re-hide them explicitly */
+.watch-loading[hidden], .watch-error[hidden], .overlay-error[hidden], .tv-pickers[hidden], .watch-hero[hidden] { display: none; }
+
+/* Hero: poster + info side by side */
+.watch-hero {
+  display: flex; gap: clamp(20px, 4vw, 40px); align-items: flex-start;
+  margin-top: 24px; padding: clamp(20px, 3vw, 36px);
+  background: var(--panel); border: 1px solid #ffffff10; border-radius: 22px;
+  box-shadow: 0 20px 60px #0007;
+}
+.watch-poster-wrap { flex-shrink: 0; width: clamp(140px, 22vw, 260px); }
+.watch-poster {
+  width: 100%; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 16px;
+  background: var(--panel-2); box-shadow: 0 12px 36px #000a;
+}
+.watch-info { flex: 1; min-width: 0; }
+.watch-title { font-family: "Russo One", sans-serif; font-weight: 400; font-size: clamp(1.4rem, 3.5vw, 2.2rem); margin: 0 0 10px; line-height: 1.15; }
+.watch-meta-line { color: var(--muted); font-size: .9rem; display: flex; flex-wrap: wrap; gap: 6px 16px; margin-bottom: 10px; }
+.watch-meta-line span { white-space: nowrap; }
+.watch-meta-line .rating { color: var(--play); font-weight: 700; }
+.watch-genres { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.watch-genres span {
+  font-size: .78rem; font-weight: 600; padding: 4px 12px; border-radius: 999px;
+  background: #ffffff10; color: var(--accent-2); border: 1px solid #ffffff14;
+}
+.watch-overview { color: #c3cdf0; font-size: .95rem; line-height: 1.6; margin: 0 0 18px; }
+.watch-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.watch-play-btn { font-size: 1.05rem; padding: 14px 30px; }
+
+/* TV pickers */
+.tv-pickers { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 16px; }
+.tv-pick { display: flex; flex-direction: column; gap: 4px; }
+.tv-pick span { font-size: .78rem; font-weight: 600; color: var(--muted); }
+.tv-pick select {
+  background: var(--panel-2); color: var(--text); border: 1px solid #ffffff1a; border-radius: 12px;
+  padding: 10px 36px 10px 14px; font: inherit; font-size: .9rem; outline: none; cursor: pointer;
+  appearance: none; -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%238796cc' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center;
+}
+.tv-pick select:focus { border-color: var(--accent); }
+
+/* Cast grid */
+.watch-section { margin-top: 32px; }
+.watch-section h2 { font-family: "Russo One", sans-serif; font-weight: 400; font-size: 1.2rem; margin: 0 0 14px; }
+.cast-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 14px; }
+.cast-card { text-align: center; }
+.cast-photo {
+  width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 8px;
+  background: var(--panel-2); background-size: cover; background-position: center top;
+  border: 2px solid #ffffff14;
+}
+.cast-name { font-size: .82rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cast-role { font-size: .72rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Related grid */
+.related-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; }
+.related-card {
+  display: block; background: var(--panel); border: 1px solid #ffffff10; border-radius: var(--radius);
+  overflow: hidden; transition: transform .18s, border-color .18s, box-shadow .18s;
+}
+.related-card:hover { transform: translateY(-3px); border-color: #ffc93c88; box-shadow: 0 8px 24px #00000060; }
+.related-poster { width: 100%; aspect-ratio: 2 / 3; object-fit: cover; display: block; background: var(--panel-2); }
+.related-name { padding: 8px 10px; font-size: .82rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ======================= Watch Overlay ======================= */
+.watch-overlay {
+  position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center;
+}
+.watch-overlay[hidden] { display: none; }
+.overlay-backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.9); }
+.overlay-stage {
+  position: relative; width: 100%; max-width: 1400px; aspect-ratio: 16 / 9;
+  margin: 0 auto; border-radius: 12px; overflow: hidden; background: #000;
+  box-shadow: 0 30px 80px #000;
+}
+.overlay-stage iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; z-index: 1; }
+.overlay-loading {
+  position: absolute; inset: 0; z-index: 2; display: grid; place-items: center;
+  background: #000; transition: opacity .3s;
+}
+.overlay-loading.done { opacity: 0; pointer-events: none; }
+.overlay-error {
+  position: absolute; inset: 0; z-index: 3; display: grid; place-content: center; justify-items: center;
+  gap: 12px; background: #000; color: var(--muted);
+}
+.overlay-close {
+  position: absolute; top: 12px; right: 12px; z-index: 4;
+  width: 42px; height: 42px; border-radius: 50%; border: 0; cursor: pointer;
+  background: #000a; color: #fff; font-size: 1.1rem; display: grid; place-items: center;
+  opacity: .6; transition: opacity .2s, background .2s;
+}
+.overlay-close:hover { opacity: 1; background: #333; }
+
+/* ======================= Channel browse head (Movies / TV tabs) ======================= */
+.channel-head { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; margin: 10px auto 24px; }
+.channel-banner { display: block; width: min(460px, 88%); height: auto; mix-blend-mode: normal; filter: drop-shadow(0 10px 40px #1f6bff44); }
+.channel-wordmark {
+  font-family: "Russo One", sans-serif; font-weight: 400; font-size: clamp(2.6rem, 7vw, 4.2rem); line-height: 1;
+  background: linear-gradient(180deg, #2563eb 0%, #22d3ee 100%); -webkit-background-clip: text; background-clip: text;
+  color: transparent; filter: drop-shadow(0 0 26px #1f6bff55);
+}
+.channel-head .channel-sub { color: var(--muted); font: 600 .95rem Inter, sans-serif; margin: 6px 0 0; letter-spacing: .3px; }
+.channel-search { position: relative; display: block; width: min(520px, 100%); margin-top: 16px; }
+.channel-search-ico { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+.channel-search input {
+  width: 100%; height: 52px; background: var(--panel); color: var(--text); border: 1px solid #1f6bff44;
+  border-radius: 999px; padding: 8px 52px 8px 48px; font: inherit; font-size: .95rem; outline: none;
+  box-shadow: 0 12px 34px #0007; transition: border-color .15s, box-shadow .15s;
+}
+.channel-search input::placeholder { color: #7a87b8; }
+.channel-search input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px #1f6bff33, 0 12px 34px #0007; }
+.channel-search input::-webkit-search-cancel-button { -webkit-appearance: none; }
+.channel-search kbd { position: absolute; right: 18px; top: 50%; transform: translateY(-50%); font: 600 .72rem Inter, sans-serif; color: var(--muted); border: 1px solid #ffffff24; border-radius: 6px; padding: 2px 7px; pointer-events: none; }
+.channel-search input:focus + .channel-search kbd, .channel-search input:focus ~ kbd { opacity: 0; }
+.browse-empty { color: var(--muted); text-align: center; padding: 40px 0 10px; }
+.browse-loading { display: grid; place-items: center; min-height: 220px; color: var(--muted); }
+.channel-banner[hidden], .channel-wordmark[hidden], .browse-empty[hidden] { display: none !important; }
+
+/* ======================= Continue Watching (home page) ======================= */
+.cw-grid { display: grid; grid-auto-flow: column; grid-auto-columns: 160px; gap: 14px; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; padding: 4px 2px 10px; }
+.cw-grid::-webkit-scrollbar { display: none; }
+.cw-card {
+  display: block; background: var(--panel); border: 1px solid #ffffff10; border-radius: var(--radius);
+  overflow: hidden; scroll-snap-align: start; transition: transform .18s, border-color .18s;
+}
+.cw-card:hover { transform: translateY(-3px); border-color: #ffc93c88; }
+.cw-poster { width: 100%; aspect-ratio: 2 / 3; object-fit: cover; display: block; background: var(--panel-2); }
+.cw-info { padding: 8px 10px 10px; }
+.cw-name { font-size: .82rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cw-sub { font-size: .72rem; color: var(--muted); margin-top: 2px; }
+.cw-progress-bar { height: 3px; background: #ffffff14; border-radius: 2px; margin-top: 6px; overflow: hidden; }
+.cw-progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); border-radius: 2px; }
+
+/* Responsive */
+@media (max-width: 640px) {
+  .watch-hero { flex-direction: column; align-items: center; text-align: center; padding: 20px 16px; }
+  .watch-poster-wrap { width: 180px; }
+  .watch-info { width: 100%; }
+  .watch-genres { justify-content: center; }
+  .watch-actions { justify-content: center; }
+  .tv-pickers { justify-content: center; }
+  .cast-grid { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px; }
+  .related-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .overlay-stage { border-radius: 0; }
+  .cw-grid { grid-auto-columns: 130px; gap: 10px; }
+}
+
+/* Keep the Movies/TV pages clean by dropping the global radial glow. */
+body.watch-page { background: var(--bg); }
