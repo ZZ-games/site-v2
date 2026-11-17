@@ -13,7 +13,7 @@
   <meta name="description" content="Free music on ZZ Games: charts, search, mood mixes and playlists.">
   <meta name="theme-color" content="#020414">
   <link rel="stylesheet" href="fonts/fonts.css">
-  <link rel="stylesheet" href="music/music.css?v=202611172">
+  <link rel="stylesheet" href="music/music.css?v=202611173">
   <link rel="stylesheet" href="zz-fx.css?v=202611176">
   <link rel="expect" href="#fxReady" blocking="render">
 </head>
@@ -58,7 +58,7 @@
 
   <div class="m-note" id="previewNote" hidden>
     <i data-ic="wave"></i>
-    <span><b>Preview mode.</b> Chart songs play as 30-second previews on this host. Audius songs and mood mixes play in full.</span>
+    <span><b>Audius streams play in full when available. Other catalogue tracks use 30-second previews.</span>
     <button class="ib sm" id="noteX" aria-label="Dismiss"><i data-ic="close"></i></button>
   </div>
 
@@ -72,7 +72,6 @@
       <button class="ib" id="npLike" aria-label="Like"><i data-ic="heart"></i></button>
       <button class="ib" id="npAdd" aria-label="Add to a playlist"><i data-ic="plus"></i></button>
       <button class="ib" id="npRadio" aria-label="Start song radio"><i data-ic="wave"></i></button>
-      <button class="ib" id="npVideo" aria-label="Show video"><i data-ic="video"></i></button>
       <button class="pill-btn" id="autoBtn" title="When a queue ends, keep playing similar songs">Autoplay</button>
     </div>
     <div class="np-mobile-ctl">
@@ -109,7 +108,6 @@
     </div>
     <div class="bar-side">
       <button class="ib" id="sleepBtn" aria-label="Sleep timer"><i data-ic="clock"></i></button>
-      <button class="ib" id="videoBtn" aria-label="Show video"><i data-ic="video"></i></button>
       <button class="ib" id="panelBtn" aria-label="Up next"><i data-ic="queue"></i></button>
       <button class="ib" id="muteBtn" aria-label="Mute"><i data-ic="vol"></i></button>
       <input type="range" id="vol" min="0" max="100" aria-label="Volume">
@@ -117,15 +115,10 @@
     </div>
   </div>
 
-  <div class="dock off" id="dock">
-    <div class="dock-head"><span id="dockTitle">Video</span><button class="ib sm" id="dockSize" aria-label="Resize video"><i data-ic="expand"></i></button><button class="ib sm" id="dockHide" aria-label="Hide video"><i data-ic="close"></i></button></div>
-    <div class="dock-frame"><div id="dockFrame"></div></div>
-  </div>
-
   <div class="menu" id="menu" hidden></div>
   <div class="toasts" id="toasts" aria-live="polite"></div>
   <dialog id="dlg"></dialog>
-  <script src="music/music.js?v=202611172"></script>
+  <script src="music/music.js?v=202611173"></script>
   <script src="zz-fx.js?v=202611176"></script>
 </body>
 </html>
