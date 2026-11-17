@@ -70,7 +70,7 @@
     // Channel banner: MOVIES image for the movies tab, gradient TV wordmark for TV
     if (mediaType === "movie") {
       var banner = $("channelBanner");
-      banner.src = "images/banner-movies.png?v=202611164";
+      banner.src = "banner-movies.png?v=202611164";
       banner.alt = "Movies";
       banner.hidden = false;
     } else {
