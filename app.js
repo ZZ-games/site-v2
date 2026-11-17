@@ -342,7 +342,7 @@ function buildSpotlight() {
     if (g.brand) {
       const s = document.createElement("div");
       s.className = "slide brand-slide" + (i === 0 ? " on" : "");
-      s.innerHTML = `<img class="brand" src="images/logo-flat.png?v=2" alt="${SITE.name}">`;
+      s.innerHTML = `<img class="brand" src="logo-flat.png?v=2" alt="${SITE.name}">`;
       slides.appendChild(s);
       const d = document.createElement("button");
       d.type = "button"; d.setAttribute("aria-label", "Show " + SITE.name);
