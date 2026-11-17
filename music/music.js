@@ -1,5 +1,5 @@
 'use strict';
-/* ZZ Games Music: Deezer catalogue/previews and Audius full-length streams. */
+/* ZZ Games Music: catalogue metadata with full-length Audius and licensed Archive playback. */
 (() => {
   /* ================= helpers ================= */
   const $ = (s, r = document) => r.querySelector(s);
@@ -372,26 +372,7 @@
       if (archiveMatch) { setNow({ title: t.t, sub: t.a + ' · Internet Archive · ' + archiveMatch.license, subHref: archiveMatch.archiveUrl, art: t.big || t.art, small: t.art, seed: t.t }); toast('Playing openly licensed audio from Internet Archive · ' + archiveMatch.license); await playAudioSource(IA + '/download/' + enc(archiveMatch.id.slice(2)) + '/' + archiveMatch.file, tok); return; }
     } catch { /* fall back to Deezer preview */ }
     if (tok !== P.tok) return;
-    if (!(await playPreview(t, tok, 'preview')) && tok === P.tok) failSkip('No full Audius or licensed Archive version or preview available for “' + t.t + '”', tok);
-  }
-
-  // Deezer's 30-second preview, fetched fresh each time (preview links expire)
-  let previewNoted = false;
-  async function playPreview(t, tok, why) {
-    try {
-      const x = await dzp('/track/' + t.id.slice(2));
-      if (tok !== P.tok) return true;
-      if (!x.preview) return false;
-      P.eng = 'audio';
-      $('#liveTag').textContent = 'Preview'; $('#liveTag').hidden = false;
-      audio.src = x.preview;
-      audio.play().catch(() => setPlaying(false));
-      if (!previewNoted || why === 'nomatch') {
-        previewNoted = true;
-        toast('No full Audius or licensed Archive version found — playing a 30-second preview');
-      }
-      return true;
-    } catch { return false; }
+    if (tok === P.tok) failSkip('No full-length Audius or licensed Internet Archive version found for “' + t.t + '” — short previews are disabled', tok);
   }
 
   function playList(list, start = 0, { shuffle = false, label = '' } = {}) {
