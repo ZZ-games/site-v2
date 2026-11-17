@@ -439,3 +439,18 @@ dialog .row-btns { display: flex; justify-content: flex-end; gap: 8px; margin-to
   .sec-h p { flex-basis: 100%; order: 3; }
   .sec-h .acts { margin-left: 0; }
 }
+
+/* Two-section Music navigation: compact cards share the full row. */
+.m-channels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); height: 148px; gap: 12px; }
+.m-panel { padding: 16px 18px; }
+.m-panel-txt b { font-size: 1.2rem; }
+body.m-compact .m-channels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); height: 58px; overflow: visible; }
+body.m-compact .m-panel { min-width: 0; width: 100%; padding: 0 14px; }
+@media (max-width: 760px) {
+  .m-channels { grid-template-columns: repeat(2, minmax(0, 1fr)); height: auto; }
+  .m-panel { min-height: 78px; padding: 12px 14px; }
+  body.m-compact .m-channels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); height: 48px; }
+  body.m-compact .m-panel { min-width: 0; padding: 0 10px; }
+}
+/* Keep any utility/settings action aligned to the far right of the top navigation. */
+.m-nav .m-ghost { margin-left: auto; }
