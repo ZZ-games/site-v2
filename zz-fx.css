@@ -218,6 +218,14 @@ html:not(.fx) .zz-links a.on, html:not(.fx) .m-links a.on { color: #fff; }
 .np-d-open { display: block; margin-top: 12px; padding: 10px; border-radius: 12px; text-align: center; font: 600 .82rem var(--body); color: var(--sky); background: #ffffff08; transition: background .2s ease, color .2s ease; }
 .np-d-open:hover { background: #2466ff26; color: #fff; }
 
+/* touch screens: a solid nav instead of frosted glass (re-blurring the moving page behind it
+   every frame is what makes iPads lag) */
+@media (hover: none) {
+  .topbar.topbar, .m-nav.m-nav { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(5, 10, 34, .94); }
+  .topbar.fx-scrolled, .m-nav.fx-scrolled { background: rgba(3, 7, 28, .97); }
+  .np-drop, .find-results { -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+
 @media (max-width: 760px) {
   body { padding-top: var(--fx-bar-space, 128px); }
   .np-pill { max-width: 44px; padding: 0 13px; gap: 0; }
@@ -240,11 +248,12 @@ html:not(.fx) .zz-links a.on, html:not(.fx) .m-links a.on { color: #fff; }
 
 /* ---------- 6. Motion system ---------- */
 @keyframes fx-fade   { from { opacity: 0; } }
-@keyframes fx-rise   { from { opacity: 0; transform: translateY(20px) scale(.98); filter: blur(6px); } }
-@keyframes fx-pop    { from { opacity: 0; transform: scale(.94) translateY(12px); filter: blur(4px); } }
+/* motion uses only opacity + transform: the GPU moves those for free (blur made iPads stutter) */
+@keyframes fx-rise   { from { opacity: 0; transform: translateY(20px) scale(.98); } }
+@keyframes fx-pop    { from { opacity: 0; transform: scale(.94) translateY(12px); } }
 @keyframes fx-drop   { from { opacity: 0; transform: translateY(-16px); } }
 @keyframes fx-dock   { from { opacity: 0; transform: translateY(-18px) scale(.98); } }
-@keyframes fx-out    { to   { opacity: 0; transform: scale(.96) translateY(8px); filter: blur(3px); } }
+@keyframes fx-out    { to   { opacity: 0; transform: scale(.96) translateY(8px); } }
 @keyframes fx-fade-out { to { opacity: 0; } }
 @keyframes fx-wipe   { from { clip-path: inset(-20% 100% -20% 0); } to { clip-path: inset(-20% -5% -20% 0); } }
 @keyframes fx-edge   { 0% { left: 0; opacity: 0; } 12%, 85% { opacity: 1; } 100% { left: 100%; opacity: 0; } }
@@ -276,10 +285,10 @@ html:not(.fx) .zz-links a.on, html:not(.fx) .m-links a.on { color: #fff; }
 body:not(.play-page) > main, .view { animation: fx-rise .6s var(--ease-out) .08s backwards; }
 
 /* scroll reveal: zz-fx.js adds .fx-wait to items below the fold, then .fx-show as they enter */
-.fx-wait { opacity: 0; transform: translateY(26px) scale(.97); filter: blur(4px); }
+.fx-wait { opacity: 0; transform: translateY(26px) scale(.97); }
 .fx-show {
-  opacity: 1; transform: none; filter: none;
-  transition: opacity .6s var(--ease-out), transform .7s var(--ease-out), filter .6s var(--ease-out);
+  opacity: 1; transform: none;
+  transition: opacity .6s var(--ease-out), transform .7s var(--ease-out);
   transition-delay: calc(var(--d, 0) * 1ms);
 }
 /* items in view on load cascade in */

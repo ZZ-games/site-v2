@@ -300,12 +300,30 @@
     { c: "90,70,255",  a: .02, r: .45, sx: .00008, sy: .00012, px: .2, py: .25, ax: .18, ay: .12 },
     { c: "56,214,255", a: .012, r: .40, sx: .00013, sy: .00009, px: .82, py: .3, ax: .14, ay: .14 }
   ];
+  // iPads / phones: no mouse, weaker GPU. The glow is soft, so drawing it at lower resolution and
+  // frame rate looks the same and costs a fraction.
+  var TOUCH = !(window.matchMedia && matchMedia("(hover: hover) and (pointer: fine)").matches);
+  var FRAME_MS = TOUCH ? 50 : 31;
+  // Each soft light is drawn once into a small image and reused (no per-frame gradients, no
+  // "lighter" blending, which iPad Safari renders as a hard-edged block).
+  function sprite(rgb) {
+    var c = document.createElement("canvas"); c.width = c.height = 128;
+    var g = c.getContext("2d"), gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+    gr.addColorStop(0, "rgba(" + rgb + ",1)"); gr.addColorStop(.45, "rgba(" + rgb + ",.45)"); gr.addColorStop(1, "rgba(" + rgb + ",0)");
+    g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
+    return c;
+  }
+  blobs.forEach(function (B) { B.img = sprite(B.c); });
+  var pointerImg = sprite("47,110,255"), starImg = sprite("170,215,255");
+  // all the soft light is painted into a quarter-size layer, then stretched over the screen once
+  var glow = document.createElement("canvas"), gctx = glow.getContext("2d"), GS = 4;
   function newStar() { return { c: (Math.random() * 40) | 0, r: (Math.random() * 16) | 0, t: 0, d: rnd(90, 200), wait: (Math.random() * 240) | 0 }; }
   function size() {
-    dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    dpr = TOUCH ? .75 : Math.min(window.devicePixelRatio || 1, 1.5);
     W = innerWidth; H = innerHeight;
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    glow.width = Math.max(1, Math.ceil(W / GS)); glow.height = Math.max(1, Math.ceil(H / GS));
     var ns = W < 700 ? 6 : 14;
     while (stars.length < ns) stars.push(newStar()); stars.length = ns;
   }
@@ -320,7 +338,7 @@
   function frame(now) {
     if (!running) return;
     requestAnimationFrame(frame);
-    if (now - lastDraw < 31) return;          // ~30fps is plenty for a backdrop
+    if (now - lastDraw < FRAME_MS) return;    // ~30fps (20 on touch screens) is plenty for a backdrop
     if (body.classList.contains("games-overlay")) return;   // Music page hidden behind another page
     lastDraw = now;
     var t = gentle() ? 0 : now - t0;                       // reduce-motion devices: light holds still
@@ -329,24 +347,23 @@
     var fadeTop = Math.max(0, 1 - (window.scrollY || 0) / 1400);
     ctx.clearRect(0, 0, W, H);
 
-    // drifting light
-    ctx.globalCompositeOperation = "lighter";
+    // drifting light (painted small, stretched once)
+    gctx.clearRect(0, 0, glow.width, glow.height);
     for (var b = 0; b < blobs.length; b++) {
       var B = blobs[b];
       var bx = W * (B.px + Math.sin(t * B.sx + b) * B.ax), by = H * (B.py + Math.cos(t * B.sy + b * 2) * B.ay) - (window.scrollY || 0) * .15;
       var br = Math.max(W, 700) * B.r;
-      var bg = ctx.createRadialGradient(bx, by, 0, bx, by, br);
-      bg.addColorStop(0, "rgba(" + B.c + "," + (B.a * (.45 + .55 * fadeTop)).toFixed(3) + ")");
-      bg.addColorStop(1, "rgba(" + B.c + ",0)");
-      ctx.fillStyle = bg; ctx.fillRect(bx - br, by - br, br * 2, br * 2);
+      gctx.globalAlpha = B.a * 1.6 * (.45 + .55 * fadeTop);
+      gctx.drawImage(B.img, (bx - br) / GS, (by - br) / GS, br * 2 / GS, br * 2 / GS);
     }
-    // soft light that trails the pointer
-    gx += (mouse.x - gx) * .08; gy += (mouse.y - gy) * .08;
-    var pg0 = ctx.createRadialGradient(gx, gy, 0, gx, gy, 360);
-    pg0.addColorStop(0, "rgba(47,110,255," + (mouse.on ? .05 : .02) + ")");
-    pg0.addColorStop(1, "rgba(47,110,255,0)");
-    ctx.fillStyle = pg0; ctx.fillRect(gx - 360, gy - 360, 720, 720);
-    ctx.globalCompositeOperation = "source-over";
+    // soft light that trails the pointer (mouse only)
+    if (!TOUCH) {
+      gx += (mouse.x - gx) * .08; gy += (mouse.y - gy) * .08;
+      gctx.globalAlpha = mouse.on ? .07 : .03;
+      gctx.drawImage(pointerImg, (gx - 360) / GS, (gy - 360) / GS, 720 / GS, 720 / GS);
+    }
+    gctx.globalAlpha = 1;
+    ctx.drawImage(glow, 0, 0, W, H);
 
     // the grid
     ctx.lineWidth = 1;
@@ -356,7 +373,7 @@
     gridPath(ox, oy); ctx.strokeStyle = lg; ctx.stroke();
 
     // lines light up around the pointer
-    if (mouse.on) {
+    if (mouse.on && !TOUCH) {
       var pg = ctx.createRadialGradient(gx, gy, 0, gx, gy, 240);
       pg.addColorStop(0, "rgba(140,190,255,.4)"); pg.addColorStop(1, "rgba(140,190,255,0)");
       ctx.strokeStyle = pg; ctx.stroke();
@@ -385,10 +402,7 @@
       var depth = Math.max(.2, 1 - (syp + sy) / 900);
       var al = env * depth;
       if (al < .02) continue;
-      var sg = ctx.createRadialGradient(sxp, syp, 0, sxp, syp, 16);
-      sg.addColorStop(0, "rgba(170,215,255," + (.55 * al).toFixed(3) + ")");
-      sg.addColorStop(1, "rgba(170,215,255,0)");
-      ctx.fillStyle = sg; ctx.fillRect(sxp - 16, syp - 16, 32, 32);
+      ctx.globalAlpha = .55 * al; ctx.drawImage(starImg, sxp - 16, syp - 16, 32, 32); ctx.globalAlpha = 1;
       ctx.fillStyle = "rgba(225,240,255," + (.9 * al).toFixed(3) + ")";
       ctx.fillRect(sxp - 1, syp - 1, 2, 2);
     }

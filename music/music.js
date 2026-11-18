@@ -283,7 +283,14 @@
   /* ================= list registry (rows reference arrays by key) ================= */
   const LISTS = new Map();
   let regN = 0;
-  const reg = (list, pfx = 'L') => { const k = pfx + ++regN; LISTS.set(k, list); return k; };
+  let warmBudget = 6;   // background lookups allowed on the current screen
+  const reg = (list, pfx = 'L') => {
+    const k = pfx + ++regN; LISTS.set(k, list);
+    // get the first few songs of every list ready, so tapping one starts the full song straight away
+    // (at most a handful per screen, so the free lookup servers aren't flooded)
+    (window.requestIdleCallback || ((f) => setTimeout(f, 300)))(() => list.slice(0, 3).forEach((t, i) => setTimeout(() => { if (warmBudget > 0 && t && t.src === 'dz' && !ytc[t.id]) { warmBudget--; prepare(t); } }, i * 400)));
+    return k;
+  };
 
   const isLiked = (t) => S.liked.some((x) => x.id === t.id);
   const isCur = (t) => P.mode === 'song' && P.cur?.id === t.id;
@@ -601,19 +608,51 @@
     remember({ k: 'song', id: t.id, t: t.t, s: t.a, img: t.art, ref: slim(t) });
     // while this one starts, quietly find the next two so skipping is instant
     setTimeout(() => { if (tok === P.tok) [P.q[P.i + 1], P.q[P.i + 2]].forEach(prepare); }, 1500);
-    if (t.src === 'dz') {
-      const v = await ytResolve(t);
-      if (tok !== P.tok) return;
-      if (v) {
-        // iPad / iPhone: the full song as plain audio (iOS blocks the hidden YouTube player)
-        if (IOS && await playFullAudio(v, tok, () => playYT(v, tok))) return;
-        if (tok !== P.tok) return;
-        await playYT(v, tok); return;
-      }
-    }
     if (t.src === 'au') { await playAudioSource(AU + '/tracks/' + t.id.slice(2) + '/stream?' + APP, tok); return; }
     if (t.src === 'ia') { await playAudioSource(IA + '/download/' + enc(t.id.slice(2)) + '/' + t.file, tok); return; }
-    await playFallback(t, tok);
+    if (t.src !== 'dz') { await playFallback(t, tok); return; }
+    // Already found (played before, or looked up ahead of time): the full song starts right away
+    const hit = ytc[t.id];
+    if (hit && Date.now() - hit[1] < 30 * 864e5) { await playFull(hit[0], tok); return; }
+    // Not found yet: sound starts the instant you tap (the preview) while the full song is found,
+    // then it fades over to the full song from the start
+    const previewing = !!t.pre;
+    if (previewing) playAudioSource(t.pre, tok);
+    const v = await ytResolve(t);
+    if (tok !== P.tok) return;
+    if (v) { await switchTo(() => playFull(v, tok), tok, previewing); return; }
+    const alt = await findFullAlt(t, tok);   // the full song somewhere else; the preview keeps playing meanwhile
+    if (tok !== P.tok) return;
+    if (alt) { await switchTo(alt, tok, previewing); return; }
+    if (!previewing) failSkip('Couldn’t find a playable version of “' + t.t + '”', tok);
+  }
+  async function playFull(v, tok) {
+    // iPad / iPhone: the full song as plain audio (iOS blocks the hidden YouTube player)
+    if (IOS && await playFullAudio(v, tok, () => playYT(v, tok))) return;
+    if (tok !== P.tok) return;
+    await playYT(v, tok);
+  }
+  // quick fade out of the preview, then start the full song
+  async function switchTo(start, tok, previewing) {
+    if (previewing && P.eng === 'audio' && !audio.paused && !IOS) {
+      const from = audio.volume;
+      for (let k = 1; k <= 6 && tok === P.tok; k++) { audio.volume = from * (1 - k / 6); await new Promise((r) => setTimeout(r, 40)); }
+    }
+    if (tok !== P.tok) return;
+    P.onAudioFail = null;
+    stopEngines(); applyVol();
+    await start();
+  }
+  async function findFullAlt(t, tok) {
+    try {
+      const m = await findAudiusVersion(t);
+      if (m) return () => playAudioSource(AU + '/tracks/' + m.id + '/stream?' + APP, tok);
+    } catch { /* try Internet Archive */ }
+    try {
+      const a = await findArchiveVersion(t);
+      if (a) return () => { setNow({ title: t.t, sub: t.a, subHref: a.archiveUrl, art: t.big || t.art, small: t.art, seed: t.t }); return playAudioSource(IA + '/download/' + enc(a.id.slice(2)) + '/' + a.file, tok); };
+    } catch { /* none */ }
+    return null;
   }
   // Other places to find the same song, quietly, in order: Audius, Internet Archive, the 30s preview
   async function playFallback(t, tok) {
@@ -977,6 +1016,7 @@
   }
   const live = (tok) => tok === VT;
   async function route() {
+    warmBudget = 6;
     const { parts, q } = parse();
     const tok = ++VT;
     for (const k of LISTS.keys()) if (!k.startsWith('Q')) LISTS.delete(k);

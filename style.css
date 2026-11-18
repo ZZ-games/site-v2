@@ -367,7 +367,7 @@ main { padding: 0 clamp(16px, 4vw, 40px) 40px; max-width: 1400px; margin: 0 auto
   opacity: 0; visibility: hidden; transition: opacity .9s var(--ease), visibility .9s;
 }
 .slide.on { opacity: 1; visibility: visible; }
-.slide-bg { position: absolute; inset: -30px; background-size: cover; background-position: center; filter: blur(28px) saturate(1.2) brightness(.42); transform: scale(1.1); }
+.slide-bg { position: absolute; inset: -30px; background-size: cover; background-position: center; filter: blur(28px) saturate(1.2) brightness(.42); transform: scale(1.1); will-change: transform; }
 .slide.on .slide-bg { animation: fx-kb 9s ease-out both; }
 .slide::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, #00030fe6 0%, #00030f66 55%, transparent 100%); }
 .slide-art {
