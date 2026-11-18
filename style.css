@@ -419,7 +419,11 @@ main { padding: 0 clamp(16px, 4vw, 40px) 40px; max-width: 1400px; margin: 0 auto
 
 /* ---------- 7. Play page ---------- */
 body.play-page { overflow-x: hidden; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
-.play-page main.stage-wrap { width: 100%; max-width: 1600px; padding: 10px clamp(10px, 2vw, 24px) 32px; }
+/* Game pages give the game every pixel they can: a slimmer nav sitting a little higher, the game
+   starting just under it, and only a small gap at the bottom. */
+body.play-page { padding-top: calc(var(--fx-bar-space, 84px) - 10px); }
+.play-page .topbar.topbar { top: 8px; min-height: 52px; padding-top: 4px; padding-bottom: 4px; }
+.play-page main.stage-wrap { width: 100%; max-width: 1700px; padding: 0 clamp(8px, 1.4vw, 20px) 28px; }
 .play-page .topbar { padding-right: 10px; }
 .game-title {
   flex: 1 1 auto; min-width: 70px; margin: 0; text-align: center; font-size: clamp(.85rem, 1.2vw, 1.08rem);
@@ -434,8 +438,8 @@ body.play-page { overflow-x: hidden; -webkit-tap-highlight-color: transparent; t
   position: relative; aspect-ratio: 16 / 9; margin-inline: auto;
   /* as wide as the page allows, but never taller than the space left under the nav, so the
      whole game is on screen without scrolling (dvh = the screen area actually visible) */
-  width: min(100%, calc((100vh - var(--fx-bar-space, 84px) - 30px) * 16 / 9));
-  width: min(100%, calc((100dvh - var(--fx-bar-space, 84px) - 30px) * 16 / 9));
+  width: min(100%, calc((100vh - var(--fx-bar-space, 84px) + 2px) * 16 / 9));
+  width: min(100%, calc((100dvh - var(--fx-bar-space, 84px) + 2px) * 16 / 9));
   background: #000; border-radius: var(--r); overflow: hidden; border: 1px solid var(--edge);
   box-shadow: 0 30px 80px #000d, 0 0 0 1px var(--edge);
   animation: fx-pop .6s var(--ease-out) backwards;
@@ -498,7 +502,7 @@ body.window-full .exit-full { display: block; animation: fx-drop .4s var(--ease-
   .play-page .game-title { font-size: .85rem; min-width: 0; flex: 1 1 0; }
   .play-page .topbar .logo img { height: 22px; }
   .play-page .actions .btn { padding: 8px 11px; font-size: .78rem; }
-  .stage { width: min(100%, calc((100dvh - var(--fx-bar-space, 128px) - 24px) * 3 / 4)); aspect-ratio: 3 / 4; border-radius: 10px; }
+  .stage { width: min(100%, calc((100dvh - var(--fx-bar-space, 128px) + 2px) * 3 / 4)); aspect-ratio: 3 / 4; border-radius: 10px; }
 }
 
 /* ---------- 8. Settings ---------- */
