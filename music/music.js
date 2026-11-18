@@ -401,7 +401,7 @@
   const INVHOSTS = ['https://inv.nadeko.net', 'https://invidious.nerdvpn.de', 'https://invidious.f5.si', 'https://inv.tux.pizza', 'https://invidious.privacyredirect.com'];
   // Optional, most reliable: a free YouTube Data API key (Google Cloud console → YouTube Data API v3 →
   // Create API key, then restrict it to the website zz-games.github.io). Leave empty to skip.
-  const YT_KEY = '';
+  const YT_KEY = 'AIzaSyCZ2vIxFir0cgT1RdAMeow60_IsPGfIJX8';
   // v2: older lookups could match the wrong song, so they're dropped
   try { localStorage.removeItem('zzs:ytv'); } catch { /* ignore */ }
   // Ask every lookup server at once and take the first good answer (one slow or dead server
@@ -490,10 +490,16 @@
       raceJson(INVHOSTS.map((h) => h + '/api/v1/search?type=video&q=' + q), (j) => Array.isArray(j) && j.some((x) => x.videoId))
         .then((j) => pickOrFail((j || []).filter((x) => x.videoId).map((x) => ({ url: '/watch?v=' + x.videoId, type: 'stream', title: x.title, uploader: x.author, duration: x.lengthSeconds })))),
     ];
-    if (YT_KEY) sources.push(
-      fetch('https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoCategoryId=10&maxResults=8&q=' + q + '&key=' + YT_KEY, { signal: AbortSignal.timeout(8000) })
-        .then((r) => (r.ok ? r.json() : Promise.reject(new Error(r.status))))
-        .then((j) => pickOrFail((j.items || []).map((x) => ({ url: '/watch?v=' + x.id.videoId, type: 'stream', title: unEntity(x.snippet.title), uploader: unEntity(x.snippet.channelTitle), duration: 0 })))));
+    // The YouTube key has a daily limit (about 100 searches), so it's the backup: it's only used
+    // when the free servers fail or haven't answered within 2.5 seconds.
+    const viaKey = () => fetch('https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=8&q=' + q + '&key=' + YT_KEY, { signal: AbortSignal.timeout(8000) })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(r.status))))
+      .then((j) => pickOrFail((j.items || []).map((x) => ({ url: '/watch?v=' + x.id.videoId, type: 'stream', title: unEntity(x.snippet.title), uploader: unEntity(x.snippet.channelTitle), duration: 0 }))));
+    if (YT_KEY) {
+      const free = Promise.any(sources);
+      sources.push(Promise.race([free.then(() => 'done', () => 'failed'), new Promise((r) => setTimeout(() => r('slow'), 2500))])
+        .then((why) => (why === 'done' ? Promise.reject(new Error('not needed')) : viaKey())));
+    }
     const job = Promise.any(sources)
       .then((v) => { ytc[t.id] = [v, Date.now()]; saveYt(); return v; })
       .catch(() => { ytcFail[t.id] = Date.now(); return null; })
