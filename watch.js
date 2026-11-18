@@ -316,7 +316,12 @@
     $("overlayServerName").textContent = src.provider_name;
     // nothing heard from the server after a while: point at the Server button
     clearTimeout(nudgeTimer);
-    nudgeTimer = setTimeout(function () { if (overlayOpen && !heardFrom) btn.classList.add("nudge"); }, 12000);
+    nudgeTimer = setTimeout(function () {
+      if (!overlayOpen || heardFrom) return;
+      btn.classList.add("nudge");
+      // some servers never say they started, so the hint fades on its own
+      nudgeTimer = setTimeout(function () { btn.classList.remove("nudge"); }, 6000);
+    }, 12000);
   }
   frame.addEventListener("load", function () { if (overlayOpen && frame.src) overlayLoading.classList.add("done"); });
 
