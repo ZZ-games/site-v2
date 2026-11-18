@@ -32,6 +32,7 @@
     space(); onScroll();
     addEventListener("scroll", onScroll, { passive: true });
     addEventListener("resize", space);
+    if ("ResizeObserver" in window) new ResizeObserver(space).observe(bar);   // e.g. the nav wraps onto two rows
   }
 
   // Movies / TV share one page: light up the right tab
@@ -195,6 +196,89 @@
       });
     }, 1500);
   });
+
+  /* ---------- 6. Now playing (music keeps playing across the site) ----------
+     While a song plays, pages open inside the Music player. Their nav gets a small
+     "now playing" button; tapping it drops down the controls. */
+  (function nowPlaying() {
+    var M = null;
+    try { if (window.parent !== window && window.parent.ZZMusic) M = window.parent.ZZMusic; } catch (e) {}
+    var bar0 = document.querySelector(".topbar");
+    if (!M || !bar0) return;
+    var IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+    var I = {
+      play: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>',
+      pause: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>',
+      prev: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg>',
+      next: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg>',
+      vol: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg>',
+      down: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>'
+    };
+    var wrap = document.createElement("div");
+    wrap.className = "np-wrap"; wrap.hidden = true;
+    wrap.innerHTML =
+      '<button type="button" class="np-pill" aria-haspopup="true" aria-expanded="false" aria-label="Now playing">' +
+        '<span class="np-eq" aria-hidden="true"><i></i><i></i><i></i></span><span class="np-pill-txt"></span>' + I.down + '</button>' +
+      '<div class="np-drop" role="dialog" aria-label="Music controls" hidden>' +
+        '<div class="np-d-top"><span class="np-d-art"></span><div class="np-d-meta"><b></b><small></small></div></div>' +
+        '<div class="np-d-prog"><span class="np-t0">0:00</span><input type="range" class="np-seek" min="0" max="1000" value="0" aria-label="Seek"><span class="np-t1">0:00</span></div>' +
+        '<div class="np-d-ctrl"><button type="button" class="np-b np-prev" aria-label="Previous">' + I.prev + '</button>' +
+          '<button type="button" class="np-b np-play" aria-label="Play">' + I.play + '</button>' +
+          '<button type="button" class="np-b np-next" aria-label="Next">' + I.next + '</button></div>' +
+        (IOS ? '' : '<div class="np-d-vol">' + I.vol + '<input type="range" class="np-vol" min="0" max="100" aria-label="Volume"></div>') +
+        '<a class="np-d-open" href="music.html">Open Music</a>' +
+      '</div>';
+    var gear = bar0.querySelector(":scope > .icon-btn");
+    if (gear) bar0.insertBefore(wrap, gear); else bar0.appendChild(wrap);
+    var $ = function (s) { return wrap.querySelector(s); };
+    var pill = $(".np-pill"), drop = $(".np-drop"), seek = $(".np-seek"), vol = $(".np-vol");
+    var seeking = false, lastArt = "";
+    var fmt = function (s) { s = Math.max(0, Math.floor(s || 0)); return Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2); };
+    function paint() {
+      var st; try { st = M.state(); } catch (e) { return; }
+      wrap.hidden = !st.active;
+      if (!st.active) { if (!drop.hidden) toggleDrop(false); return; }
+      wrap.classList.toggle("on", st.playing);
+      $(".np-pill-txt").textContent = st.title;
+      pill.title = st.title + (st.artist ? " · " + st.artist : "");
+      if (drop.hidden) return;
+      $(".np-d-meta b").textContent = st.title; $(".np-d-meta small").textContent = st.artist;
+      if (st.art !== lastArt) { lastArt = st.art; $(".np-d-art").style.backgroundImage = st.art ? "url('" + st.art.replace(/'/g, "%27") + "')" : ""; }
+      var playBtn = $(".np-play");
+      playBtn.innerHTML = st.playing ? I.pause : I.play; playBtn.setAttribute("aria-label", st.playing ? "Pause" : "Play");
+      $(".np-t1").textContent = fmt(st.dur);
+      if (!seeking) { $(".np-t0").textContent = fmt(st.pos); seek.value = st.dur ? Math.round(st.pos / st.dur * 1000) : 0; }
+      seek.style.setProperty("--p", (seek.value / 10) + "%");
+      if (vol && document.activeElement !== vol) { vol.value = Math.round(st.vol * 100); vol.style.setProperty("--p", vol.value + "%"); }
+    }
+    var closeT = 0;
+    function toggleDrop(open) {
+      if (open == null) open = drop.hidden;
+      clearTimeout(closeT);
+      pill.setAttribute("aria-expanded", open ? "true" : "false");
+      wrap.classList.toggle("open", open);
+      if (open) { drop.classList.remove("closing"); drop.hidden = false; paint(); }
+      else if (!drop.hidden) {
+        if (calm()) { drop.hidden = true; return; }
+        drop.classList.add("closing");
+        closeT = setTimeout(function () { drop.hidden = true; drop.classList.remove("closing"); }, 180);
+      }
+    }
+    pill.addEventListener("click", function () { toggleDrop(); });
+    $(".np-play").addEventListener("click", function () { M.toggle(); setTimeout(paint, 60); });
+    $(".np-prev").addEventListener("click", function () { M.prev(); setTimeout(paint, 120); });
+    $(".np-next").addEventListener("click", function () { M.next(); setTimeout(paint, 120); });
+    seek.addEventListener("input", function () {
+      seeking = true; var st = M.state();
+      $(".np-t0").textContent = fmt(seek.value / 1000 * st.dur); seek.style.setProperty("--p", (seek.value / 10) + "%");
+    });
+    seek.addEventListener("change", function () { var st = M.state(); M.seek(seek.value / 1000 * st.dur); seeking = false; });
+    if (vol) vol.addEventListener("input", function () { M.setVolume(vol.value / 100); vol.style.setProperty("--p", vol.value + "%"); });
+    document.addEventListener("pointerdown", function (e) { if (!drop.hidden && !wrap.contains(e.target)) toggleDrop(false); });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !drop.hidden) { toggleDrop(false); pill.focus(); } });
+    paint();
+    setInterval(paint, 500);
+  })();
 
   /* ---------- 5. Live backdrop ----------
      A blue grid that drifts with the page (slower than the content, so it
