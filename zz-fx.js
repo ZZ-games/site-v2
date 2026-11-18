@@ -71,7 +71,7 @@
     var home = function () {
       pill.classList.remove("fx-squish");
       clearTimeout(backT);
-      backT = setTimeout(function () { place(here()); }, 160);
+      backT = setTimeout(function () { place(here()); }, 90);
     };
     tabs.forEach(function (a) {
       a.addEventListener("pointerenter", function () { place(a); });
