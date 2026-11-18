@@ -88,7 +88,6 @@ function applySettings() {
 function buildSettings() {
   const btn = document.createElement("button");
   btn.className = "icon-btn";
-  btn.style.marginLeft = "auto";
   btn.title = "Settings";
   btn.setAttribute("aria-label", "Settings");
   btn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>`;
@@ -127,8 +126,15 @@ function buildSettings() {
     panel.querySelectorAll("#setFull button").forEach((b) => b.classList.toggle("on", b.dataset.v === S.fullMode));
     panel.querySelectorAll("#setDesk button").forEach((b) => b.classList.toggle("on", b.dataset.v === S.desktopMode));
   };
-  const open = () => { sync(); panel.hidden = false; };
-  const close = () => { panel.hidden = true; };
+  let closeT = 0;
+  const open = () => { clearTimeout(closeT); panel.classList.remove("closing"); sync(); panel.hidden = false; };
+  const close = () => {
+    if (panel.hidden || panel.classList.contains("closing")) return;
+    const calm = document.documentElement.classList.contains("reduce-motion") || matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (calm) { panel.hidden = true; return; }
+    panel.classList.add("closing");
+    closeT = setTimeout(() => { panel.hidden = true; panel.classList.remove("closing"); }, 220);
+  };
   btn.onclick = open;
   $(".x").onclick = close;
   panel.addEventListener("click", (e) => { if (e.target === panel) close(); });
@@ -226,7 +232,7 @@ function initHome() {
   const logo = document.querySelector(".topbar .logo");
   if (logo) logo.addEventListener("click", (e) => { e.preventDefault(); scrollTo({ top: 0, behavior: "smooth" }); });
 
-  // Hero channels: the hovered/focused panel grows; Games scrolls down, Music opens music.html
+  // Hero channels: the hovered/focused panel opens up
   const chans = document.getElementById("channels");
   const panels = [...chans.querySelectorAll(".zz-panel")];
   const pick = (id) => panels.forEach((p) => {
@@ -237,22 +243,8 @@ function initHome() {
   pick("games");
   panels.forEach((p) => {
     ["mouseenter", "focus"].forEach((ev) => p.addEventListener(ev, () => pick(p.dataset.ch)));
-    if (p.classList.contains("soon")) p.addEventListener("click", () => {
-      pick(p.dataset.ch);
-      p.classList.remove("nudge"); void p.offsetWidth; p.classList.add("nudge");
-    });
   });
   chans.addEventListener("mouseleave", () => pick("games"));
-  document.querySelectorAll("[data-soon]").forEach((a) => a.addEventListener("click", (e) => {
-    e.preventDefault();
-    const p = panels.find((x) => x.dataset.ch === a.dataset.soon);
-    chans.scrollIntoView({ behavior: "smooth", block: "center" });
-    if (p) { pick(p.dataset.ch); p.classList.remove("nudge"); void p.offsetWidth; p.classList.add("nudge"); }
-  }));
-  // Nav gets a solid background once the page scrolls
-  const nav = document.querySelector(".zz-nav");
-  const onScroll = () => nav.classList.toggle("scrolled", scrollY > 10);
-  addEventListener("scroll", onScroll, { passive: true }); onScroll();
 
   // Rows
   const fill = (wrapId, boxId, list) => {
@@ -305,20 +297,9 @@ function buildSpotlight() {
     </div>
     <div class="spot-side"><div class="spot-side-title">Top picks</div></div>`;
   const slides = spot.querySelector(".spot-slides"), dots = spot.querySelector(".spot-dots");
-  const items = [{ brand: true, title: SITE.name }].concat(feat);
+  const items = feat;
+  if (!items.length) spot.querySelector(".spot-main").remove();
   items.forEach((g, i) => {
-    if (g.brand) {
-      const s = document.createElement("div");
-      s.className = "slide brand-slide" + (i === 0 ? " on" : "");
-      s.innerHTML = `<img class="brand" src="logo-flat.png?v=2" alt="${SITE.name}">`;
-      slides.appendChild(s);
-      const d = document.createElement("button");
-      d.type = "button"; d.setAttribute("aria-label", "Show " + SITE.name);
-      if (i === 0) d.classList.add("on");
-      d.onclick = () => { show(i); restart(); };
-      dots.appendChild(d);
-      return;
-    }
     const s = document.createElement("a");
     s.className = "slide" + (i === 0 ? " on" : "");
     s.href = `play.html?game=${g.id}`;
@@ -342,14 +323,29 @@ function buildSpotlight() {
   function show(i) {
     cur = (i + items.length) % items.length;
     slides.querySelectorAll(".slide").forEach((el, j) => el.classList.toggle("on", j === cur));
-    dots.querySelectorAll("button").forEach((el, j) => el.classList.toggle("on", j === cur));
+    // re-create the active dot so its progress bar starts again from empty
+    dots.querySelectorAll("button").forEach((el, j) => {
+      el.classList.remove("on");
+      if (j === cur) { void el.offsetWidth; el.classList.add("on"); }
+    });
   }
   function restart() {
     clearInterval(timer);
     if (items.length > 1 && !S.reduceMotion) timer = setInterval(() => show(cur + 1), 6000);
   }
-  spot.querySelector(".spot-main").addEventListener("mouseenter", () => clearInterval(timer));
-  spot.querySelector(".spot-main").addEventListener("mouseleave", restart);
+  const main = spot.querySelector(".spot-main");
+  if (main) {
+    main.addEventListener("mouseenter", () => { clearInterval(timer); main.classList.add("paused"); });
+    main.addEventListener("mouseleave", () => { main.classList.remove("paused"); restart(); });
+    // swipe between slides on touch screens
+    let x0 = null;
+    main.addEventListener("touchstart", (e) => { x0 = e.touches[0].clientX; }, { passive: true });
+    main.addEventListener("touchend", (e) => {
+      if (x0 === null) return;
+      const dx = e.changedTouches[0].clientX - x0; x0 = null;
+      if (Math.abs(dx) > 40) { show(cur + (dx < 0 ? 1 : -1)); restart(); }
+    }, { passive: true });
+  }
   restart();
 
   const side = spot.querySelector(".spot-side");
@@ -453,6 +449,8 @@ function initPlay() {
     if (md) md.content = `Play ${g.title} unblocked for free on ZZ Games. No download – it runs right in your browser.`;
   }
   document.getElementById("gameTitle").textContent = g.title;
+  const art = document.querySelector(".loader-art");
+  if (art && g.image) art.style.backgroundImage = `url('${g.image}')`;
   if (!g.gamble) {
     addRecent(g.id);
   }
@@ -476,7 +474,7 @@ function initPlay() {
     load();
     frame.addEventListener("load", () => { if (frame.src) loader.classList.add("done"); });
   } else {
-    loader.querySelector("p").textContent = "This game doesn't have a link yet — add it in games.js.";
+    loader.querySelector("p").textContent = "This game doesn't have a link yet.";
     loader.querySelector(".spinner").remove();
   }
 
@@ -567,15 +565,3 @@ if (document.body.classList.contains("play-page")) initPlay();
 else if (document.body.classList.contains("watch-page")) { /* watch.js handles its own init */ }
 else if (document.body.classList.contains("games-page")) { initGames(); }
 else { initHome(); initContinueWatching(); }
-
-// Offline support: remember the site, and save Cookie Clicker for offline play.
-if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
-  try {
-    navigator.serviceWorker.register("sw.js").then(() => navigator.serviceWorker.ready).then((reg) => {
-      const q = new URLSearchParams(location.search).get("game");
-      if (q !== "cookie-clicker" || !reg.active) return;
-      const base = new URL("games/cookieclicker/", location.href).href;
-      fetch(base + "offline-manifest.json").then((r) => r.json()).then((files) => reg.active.postMessage({ type: "precache", base, files })).catch(() => {});
-    }).catch(() => {});
-  } catch (e) {}
-}
