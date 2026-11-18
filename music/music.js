@@ -483,6 +483,10 @@
     const sources = [
       piped('/search?q=' + q + '&filter=music_songs', (j) => (j.items || []).some((x) => x.url && x.type === 'stream'))
         .then((j) => pickOrFail(j ? (j.items || []).filter((x) => x.url && x.type === 'stream') : [])),
+      // the "songs" list often misses the real upload (Hotline Bling only had covers there), so
+      // the normal video search is asked at the same time
+      piped('/search?q=' + q + '&filter=videos', (j) => (j.items || []).some((x) => x.url && x.type === 'stream'))
+        .then((j) => pickOrFail(j ? (j.items || []).filter((x) => x.url && x.type === 'stream') : [])),
       raceJson(INVHOSTS.map((h) => h + '/api/v1/search?type=video&q=' + q), (j) => Array.isArray(j) && j.some((x) => x.videoId))
         .then((j) => pickOrFail((j || []).filter((x) => x.videoId).map((x) => ({ url: '/watch?v=' + x.videoId, type: 'stream', title: x.title, uploader: x.author, duration: x.lengthSeconds })))),
     ];
@@ -574,40 +578,62 @@
     });
     return ytApi;
   }
+  // One YouTube player is made ahead of time and reused for every song: songs start faster, and on
+  // iPad/iPhone a song can be started inside the tap itself (iOS only allows sound that starts from a tap).
+  let ytReadyP = null, ytWant = null;
+  function ytPlayer() {
+    if (ytReadyP) return ytReadyP;
+    ytReadyP = loadYT().then(() => new Promise((res, rej) => {
+      const host = $('#npVid');
+      if (!host) { rej(new Error('no player box')); return; }
+      host.innerHTML = '<div id="ytp"></div>';
+      const p = new YT.Player('ytp', {
+        host: 'https://www.youtube-nocookie.com', width: '100%', height: '100%',
+        playerVars: { autoplay: 0, controls: 0, rel: 0, playsinline: 1, iv_load_policy: 3, modestbranding: 1, disablekb: 1, fs: 1 },
+        events: { onReady: () => { ytNP = p; res(p); }, onStateChange: (e) => ytState(e.data), onError: () => ytErr() },
+      });
+      setTimeout(() => rej(new Error('YouTube took too long')), 15000);
+    })).catch((e) => { ytReadyP = null; throw e; });
+    return ytReadyP;
+  }
+  function ytState(d) {
+    const w = ytWant;
+    if (!w || w.tok !== P.tok || w.done) return;
+    if (d === 1) {
+      if (!w.started) { w.started = true; w.onStart?.(); }
+      setBuffering(false); setPlaying(true);
+    } else if (!w.started) {
+      // not really playing yet (the preview may still be on): ignore
+    } else if (d === 2) setPlaying(false);
+    else if (d === 0) { if (P.mode === 'song') onEnded(); else setPlaying(false); }
+    else if (d === 3) setBuffering(true);
+  }
+  function ytErr() { const w = ytWant; if (w && w.tok === P.tok) { ytForget(P.cur); w.fail(); } }
+  // start video v; onFail runs if it errors or doesn't start within `wait` ms
+  function ytStart(v, tok, o) {
+    const w = { tok, v, started: false, done: false, onStart: o.onStart };
+    w.fail = () => { if (w.done) return; w.done = true; if (ytWant === w) { try { ytNP?.stopVideo?.(); } catch { /* ignore */ } } o.onFail?.(); };
+    ytWant = w;
+    const go = (p) => {
+      if (tok !== P.tok || ytWant !== w || w.done) return;
+      try { p.setVolume(Math.round((S.cfg.muted ? 0 : S.cfg.vol) * 100)); p.unMute(); p.loadVideoById(v); } catch { w.fail(); }
+    };
+    if (ytNP) go(ytNP); else ytPlayer().then(go, () => w.fail());
+    setTimeout(() => { if (!w.started && tok === P.tok) w.fail(); }, o.wait || 7000);
+  }
+  function showVid(on) {
+    if ($('#npArtBox')) $('#npArtBox').hidden = on;
+    if ($('#npVid')) $('#npVid').hidden = !on;
+  }
   async function playYT(v, tok) {
     if (tok !== P.tok) return;
     P.eng = 'yt';
-    try { await loadYT(); } catch { if (tok === P.tok) playFallback(P.cur, tok); return; }
-    if (tok !== P.tok) return;
-    const host = $('#npVid');
-    host.innerHTML = '<div id="ytp' + (++ytN) + '"></div>';
-    let started = false;
-    // the YouTube player sometimes never starts (phones and tablets often block it): don't wait forever
-    setTimeout(async () => {
-      if (started || tok !== P.tok || P.eng !== 'yt') return;
-      stopEngines();
-      const ok = await playFullAudio(v, tok, () => playFallback(P.cur, tok));
-      if (!ok && tok === P.tok) playFallback(P.cur, tok);
-    }, 7000);
-    const player = new YT.Player('ytp' + ytN, {
-      host: 'https://www.youtube-nocookie.com', videoId: v, width: '100%', height: '100%',
-      playerVars: { autoplay: 1, controls: 0, rel: 0, playsinline: 1, iv_load_policy: 3, modestbranding: 1, disablekb: 1, fs: 1 },
-      events: {
-        onReady: (e) => { try { e.target.setVolume(Math.round((S.cfg.muted ? 0 : S.cfg.vol) * 100)); if (P.eng === 'yt') e.target.playVideo(); } catch { /* ignore */ } },
-        onStateChange: (e) => {
-          if (P.eng !== 'yt') return;
-          if (e.data === 1) { started = true; setBuffering(false); setPlaying(true); }
-          else if (e.data === 2) setPlaying(false);
-          else if (e.data === 0) { if (P.mode === 'song') onEnded(); else setPlaying(false); }
-          else if (e.data === 3) setBuffering(true);
-        },
-        onError: () => { if (P.eng === 'yt' && tok === P.tok) { started = true; ytForget(P.cur); stopEngines(); P.eng = 'audio'; playFallback(P.cur, tok); } },
-      },
+    showVid(true); setBuffering(true); setPlaying(true);
+    ytStart(v, tok, {
+      wait: 7000,
+      // YouTube's player wouldn't start: try the song as a plain stream, then the other sources
+      onFail: () => { if (tok !== P.tok) return; stopEngines(); P.eng = 'audio'; playFullAudio(v, tok, () => playFallback(P.cur, tok)); },
     });
-    ytNP = player;
-    if ($('#npArtBox')) $('#npArtBox').hidden = true;
-    if ($('#npVid')) $('#npVid').hidden = false;
-    setBuffering(true); setPlaying(true);
   }
   async function playTrack(t) {
     unlockAudio();   // still inside the tap that started this song
@@ -637,6 +663,13 @@
       const url = await workingStream(v);
       if (tok !== P.tok) return;
       if (url) { await switchTo(() => playAudioSource(url, tok, () => playFallback(t, tok)), tok, true); return; }
+      // no plain stream answered: try YouTube's player while the preview keeps playing
+      const ok = await new Promise((res) => ytStart(v, tok, {
+        wait: 6000,
+        onStart: () => { P.onAudioFail = null; P.eng = 'yt'; audio.pause(); audio.removeAttribute('src'); audio.load(); applyVol(); showVid(true); res(true); },
+        onFail: () => res(false),
+      }));
+      if (tok !== P.tok || ok) return;
     } else if (v) { await switchTo(() => playFull(v, tok), tok, previewing); return; }
     const alt = await findFullAlt(t, tok);   // the full song somewhere else; the preview keeps playing meanwhile
     if (tok !== P.tok) return;
@@ -644,9 +677,6 @@
     if (!previewing) failSkip('Couldn’t find a playable version of “' + t.t + '”', tok);
   }
   async function playFull(v, tok) {
-    // iPad / iPhone: the full song as plain audio (iOS blocks the hidden YouTube player)
-    if (IOS && await playFullAudio(v, tok, () => playYT(v, tok))) return;
-    if (tok !== P.tok) return;
     await playYT(v, tok);
   }
   // quick fade out of the preview, then start the full song
@@ -1439,7 +1469,7 @@
 
   // Load the YouTube player in the background (not on iPad/iPhone, which use plain audio), so
   // the first song doesn't wait for it
-  if (!IOS) (window.requestIdleCallback || ((f) => setTimeout(f, 1200)))(() => { loadYT().catch(() => {}); });
+  (window.requestIdleCallback || ((f) => setTimeout(f, 1200)))(() => { ytPlayer().catch(() => {}); });
 
   // The rest of the site talks to the player through this (pages open inside the Music shell)
   window.ZZMusic = {
