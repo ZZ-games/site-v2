@@ -212,9 +212,9 @@
   var stars = [], rings = [];
   var rnd = function (a, b) { return a + Math.random() * (b - a); };
   var blobs = [
-    { c: "36,102,255", a: .16, r: .55, sx: .00011, sy: .00007, px: .5, py: .05, ax: .28, ay: .08 },
-    { c: "90,70,255",  a: .10, r: .45, sx: .00008, sy: .00012, px: .2, py: .25, ax: .18, ay: .12 },
-    { c: "56,214,255", a: .07, r: .40, sx: .00013, sy: .00009, px: .82, py: .3, ax: .14, ay: .14 }
+    { c: "36,102,255", a: .032, r: .55, sx: .00011, sy: .00007, px: .5, py: .05, ax: .28, ay: .08 },
+    { c: "90,70,255",  a: .02, r: .45, sx: .00008, sy: .00012, px: .2, py: .25, ax: .18, ay: .12 },
+    { c: "56,214,255", a: .012, r: .40, sx: .00013, sy: .00009, px: .82, py: .3, ax: .14, ay: .14 }
   ];
   function newStar() { return { c: (Math.random() * 40) | 0, r: (Math.random() * 16) | 0, t: 0, d: rnd(90, 200), wait: (Math.random() * 240) | 0 }; }
   function size() {
@@ -231,7 +231,7 @@
     for (var y = oy; y <= H; y += CELL) { ctx.moveTo(0, y + .5); ctx.lineTo(W, y + .5); }
   }
   // grid brightness by depth down the page: strongest behind the top, never fully gone
-  var lineAlpha = function (docY) { return .06 + .17 * Math.max(0, 1 - docY / 1100); };
+  var lineAlpha = function (docY) { return .035 + .085 * Math.max(0, 1 - docY / 1100); };
 
   function frame(now) {
     if (!running) return;
@@ -259,7 +259,7 @@
     // soft light that trails the pointer
     gx += (mouse.x - gx) * .08; gy += (mouse.y - gy) * .08;
     var pg0 = ctx.createRadialGradient(gx, gy, 0, gx, gy, 360);
-    pg0.addColorStop(0, "rgba(47,110,255," + (mouse.on ? .09 : .04) + ")");
+    pg0.addColorStop(0, "rgba(47,110,255," + (mouse.on ? .05 : .02) + ")");
     pg0.addColorStop(1, "rgba(47,110,255,0)");
     ctx.fillStyle = pg0; ctx.fillRect(gx - 360, gy - 360, 720, 720);
     ctx.globalCompositeOperation = "source-over";
@@ -274,7 +274,7 @@
     // lines light up around the pointer
     if (mouse.on) {
       var pg = ctx.createRadialGradient(gx, gy, 0, gx, gy, 240);
-      pg.addColorStop(0, "rgba(140,190,255,.55)"); pg.addColorStop(1, "rgba(140,190,255,0)");
+      pg.addColorStop(0, "rgba(140,190,255,.4)"); pg.addColorStop(1, "rgba(140,190,255,0)");
       ctx.strokeStyle = pg; ctx.stroke();
     }
 
