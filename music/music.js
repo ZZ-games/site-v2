@@ -324,6 +324,20 @@
   /* ================= player engine ================= */
   const audio = new Audio();
   audio.preload = 'auto';
+  audio.playsInline = true;
+  // iPad / iPhone (iPadOS reports itself as a Mac with a touch screen)
+  const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+  // iOS only lets a page play sound that starts from a tap. Songs start after a short lookup, so the
+  // audio element is switched on during the tap itself (a silent blip); after that iOS lets it play.
+  const SILENT = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+  let audioUnlocked = false;
+  function unlockAudio() {
+    if (audioUnlocked) return;
+    audioUnlocked = true;
+    try { if (!audio.getAttribute('src')) { audio.src = SILENT; const p = audio.play(); if (p && p.catch) p.catch(() => { audioUnlocked = false; }); } } catch { audioUnlocked = false; }
+  }
+  addEventListener('pointerdown', unlockAudio, { capture: true, passive: true });
+  addEventListener('touchend', unlockAudio, { capture: true, passive: true });
   const P = { q: [], i: -1, orig: null, shuffle: store.get('shuf', false), repeat: store.get('rep', 0), mode: null, cur: null, eng: 'audio', tok: 0, label: '', playing: false };
   function stopEngines() {
     audio.pause(); audio.removeAttribute('src'); audio.load();
@@ -331,11 +345,17 @@
     if ($('#npArtBox')) $('#npArtBox').hidden = false;
     if ($('#npVid')) $('#npVid').hidden = true;
   }
-  audio.addEventListener('playing', () => { if (P.eng === 'audio') { setPlaying(true); setBuffering(false); } });
-  audio.addEventListener('pause', () => { if (P.eng === 'audio') setPlaying(false); });
-  audio.addEventListener('waiting', () => { if (P.eng === 'audio') setBuffering(true); });
-  audio.addEventListener('ended', () => { if (P.eng === 'audio') onEnded(); });
-  audio.addEventListener('error', () => { if (P.eng === 'audio' && audio.getAttribute('src')) { setBuffering(false); failSkip('Track failed — skipping'); } });
+  const real = () => P.eng === 'audio' && audio.getAttribute('src') !== SILENT;   // ignore the silent unlock blip
+  audio.addEventListener('playing', () => { if (real()) { setPlaying(true); setBuffering(false); } });
+  audio.addEventListener('pause', () => { if (real()) setPlaying(false); });
+  audio.addEventListener('waiting', () => { if (real()) setBuffering(true); });
+  audio.addEventListener('ended', () => { if (real()) onEnded(); });
+  audio.addEventListener('error', () => {
+    if (P.eng !== 'audio' || !audio.getAttribute('src') || audio.getAttribute('src') === SILENT) return;
+    // a full-song stream that won't load: try the next way to play the SAME song
+    if (P.onAudioFail) { const f = P.onAudioFail; P.onAudioFail = null; f(); return; }
+    setBuffering(false); failSkip('Track failed — skipping');
+  });
   const normAudio = (v) => String(v || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
   async function findAudiusVersion(t) {
     const found = await A('/tracks/search?query=' + enc([t.a, t.t].filter(Boolean).join(' ')) + '&limit=25');
@@ -350,8 +370,9 @@
     }
     return scoreBest >= 6 ? best : null;
   }
-  async function playAudioSource(url, tok) {
+  async function playAudioSource(url, tok, onFail) {
     if (tok !== P.tok) return;
+    P.onAudioFail = onFail || null;
     P.eng = 'audio'; audio.src = url;
     try { await audio.play(); } catch { if (tok === P.tok) { setBuffering(false); setPlaying(false); } }
   }
@@ -412,6 +433,32 @@
     ytcFail[t.id] = Date.now();
     return null;
   }
+  // The song's audio as a plain stream, for the normal <audio> player (iPad/iPhone, or when the
+  // YouTube player won't start). iOS plays AAC (audio/mp4), so that format is preferred.
+  async function ytAudio(v) {
+    for (const host of YTHOSTS) {
+      try {
+        const r = await fetch(host + '/streams/' + v, { signal: AbortSignal.timeout(9000) });
+        if (!r.ok) continue;
+        const j = await r.json();
+        const list = (j.audioStreams || []).filter((x) => x.url && !x.videoOnly);
+        const mp4 = list.filter((x) => /mp4|m4a/i.test((x.mimeType || '') + (x.format || ''))).sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0));
+        const pick = mp4[0] || (IOS ? null : list.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0]);
+        if (pick) return pick.url;
+      } catch { /* next host */ }
+    }
+    return null;
+  }
+  // Play the full song as plain audio; if that fails, YouTube's player, then the other sources
+  async function playFullAudio(v, tok, thenTry) {
+    const url = await ytAudio(v);
+    if (tok !== P.tok) return true;
+    if (!url) return false;
+    if ($('#npArtBox')) $('#npArtBox').hidden = false;
+    if ($('#npVid')) $('#npVid').hidden = true;
+    await playAudioSource(url, tok, () => { if (tok === P.tok) thenTry(); });
+    return true;
+  }
   const ytForget = (t) => { if (t && ytc[t.id]) { delete ytc[t.id]; saveYt(); } if (t) ytcFail[t.id] = Date.now(); };
   let ytApi = null, ytNP = null, ytN = 0;
   const ytCur = () => ytNP;
@@ -435,6 +482,14 @@
     if (tok !== P.tok) return;
     const host = $('#npVid');
     host.innerHTML = '<div id="ytp' + (++ytN) + '"></div>';
+    let started = false;
+    // the YouTube player sometimes never starts (phones and tablets often block it): don't wait forever
+    setTimeout(async () => {
+      if (started || tok !== P.tok || P.eng !== 'yt') return;
+      stopEngines();
+      const ok = await playFullAudio(v, tok, () => playFallback(P.cur, tok));
+      if (!ok && tok === P.tok) playFallback(P.cur, tok);
+    }, 7000);
     const player = new YT.Player('ytp' + ytN, {
       host: 'https://www.youtube-nocookie.com', videoId: v, width: '100%', height: '100%',
       playerVars: { autoplay: 1, controls: 0, rel: 0, playsinline: 1, iv_load_policy: 3, modestbranding: 1, disablekb: 1, fs: 1 },
@@ -442,12 +497,12 @@
         onReady: (e) => { try { e.target.setVolume(Math.round((S.cfg.muted ? 0 : S.cfg.vol) * 100)); if (P.eng === 'yt') e.target.playVideo(); } catch { /* ignore */ } },
         onStateChange: (e) => {
           if (P.eng !== 'yt') return;
-          if (e.data === 1) { setBuffering(false); setPlaying(true); }
+          if (e.data === 1) { started = true; setBuffering(false); setPlaying(true); }
           else if (e.data === 2) setPlaying(false);
           else if (e.data === 0) { if (P.mode === 'song') onEnded(); else setPlaying(false); }
           else if (e.data === 3) setBuffering(true);
         },
-        onError: () => { if (P.eng === 'yt' && tok === P.tok) { ytForget(P.cur); stopEngines(); P.eng = 'audio'; playFallback(P.cur, tok); } },
+        onError: () => { if (P.eng === 'yt' && tok === P.tok) { started = true; ytForget(P.cur); stopEngines(); P.eng = 'audio'; playFallback(P.cur, tok); } },
       },
     });
     ytNP = player;
@@ -456,6 +511,7 @@
     setBuffering(true); setPlaying(true);
   }
   async function playTrack(t) {
+    unlockAudio();   // still inside the tap that started this song
     const tok = ++P.tok;
     P.cur = t; P.mode = 'song';
     dispatchEvent(new Event('zzmusic:track'));
@@ -466,7 +522,12 @@
     if (t.src === 'dz') {
       const v = await ytResolve(t);
       if (tok !== P.tok) return;
-      if (v) { await playYT(v, tok); return; }
+      if (v) {
+        // iPad / iPhone: the full song as plain audio (iOS blocks the hidden YouTube player)
+        if (IOS && await playFullAudio(v, tok, () => playYT(v, tok))) return;
+        if (tok !== P.tok) return;
+        await playYT(v, tok); return;
+      }
     }
     if (t.src === 'au') { await playAudioSource(AU + '/tracks/' + t.id.slice(2) + '/stream?' + APP, tok); return; }
     if (t.src === 'ia') { await playAudioSource(IA + '/download/' + enc(t.id.slice(2)) + '/' + t.file, tok); return; }
