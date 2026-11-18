@@ -286,7 +286,7 @@ function hookGameAudio(frame) {
       if (w && w !== win) {
         try {
           if (w.location.href !== "about:blank") { win = w; patch(w); gameAudio.reachable = true; }
-        } catch { gameAudio.reachable = false; clearInterval(id); paintMute(); }
+        } catch { gameAudio.reachable = false; clearInterval(id); }
       }
       if (Date.now() - t0 > 15000) clearInterval(id);
     }, 4);
@@ -294,12 +294,11 @@ function hookGameAudio(frame) {
   frame.addEventListener("load", () => {
     try { patch(frame.contentWindow); gameAudio.reachable = true; } catch { gameAudio.reachable = false; }
     try { void frame.contentWindow.document; } catch { gameAudio.reachable = false; }
-    applyAll(); paintMute();
+    applyAll();
   });
   settingsListeners.push(applyAll);
   return watch;
 }
-let paintMute = () => {};
 
 /* Arrow buttons for rails on desktop */
 function railArrows() {
@@ -716,28 +715,6 @@ function initPlay() {
 
   document.getElementById("reload").onclick = load;
 
-  // Mute button (same switch as Settings → Mute all games)
-  const muteBtn = document.getElementById("mute");
-  if (muteBtn) {
-    const ICON_ON = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>';
-    const ICON_OFF = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="m16 9.5 5 5M21 9.5l-5 5"/></svg>';
-    paintMute = () => {
-      const off = S.muted || S.volume === 0;
-      muteBtn.innerHTML = off ? ICON_OFF : ICON_ON;
-      muteBtn.classList.toggle("on", off);
-      muteBtn.setAttribute("aria-pressed", off ? "true" : "false");
-      const lbl = gameAudio.reachable === false ? "This game uses its own sound settings" : off ? "Unmute game" : "Mute game";
-      muteBtn.title = lbl; muteBtn.setAttribute("aria-label", lbl);
-      muteBtn.classList.toggle("cant", gameAudio.reachable === false);
-    };
-    muteBtn.onclick = () => {
-      if (S.volume === 0) S.volume = 80;
-      S.muted = !S.muted; saveSettings();
-      muteBtn.classList.remove("pop"); void muteBtn.offsetWidth; muteBtn.classList.add("pop");
-    };
-    settingsListeners.push(() => paintMute());
-    paintMute();
-  }
   if (pickVersion) pickVersion(document.getElementById("versions"), () => document.getElementById("reload").onclick());
 
   // Fullscreen: "window" fills the browser tab, "screen" takes over the whole monitor

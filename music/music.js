@@ -458,6 +458,7 @@
   async function playTrack(t) {
     const tok = ++P.tok;
     P.cur = t; P.mode = 'song';
+    dispatchEvent(new Event('zzmusic:track'));
     stopEngines();
     setNow({ title: t.t, sub: t.a, subHref: t.src === 'ia' ? t.archiveUrl : (t.aid ? '#/artist/' + t.aid : ''), art: t.big || t.art, small: t.art, seed: t.t });
     setBuffering(true); markCurrent(); renderQueue(); bumpTaste(t);

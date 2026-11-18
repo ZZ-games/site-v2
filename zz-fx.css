@@ -205,13 +205,17 @@ html:not(.fx) .zz-links a.on, html:not(.fx) .m-links a.on { color: #fff; }
 @keyframes fx-shimmer { from { background-position: -200% 0; } to { background-position: 200% 0; } }
 @keyframes fx-nudge  { 30% { transform: translateX(-5px); } 60% { transform: translateX(4px); } }
 
-/* page-to-page: the dock, logo and pill carry across; content cross-fades */
+/* page-to-page: the dock, logo, tab labels and pill carry across; the page under them cross-fades */
 @view-transition { navigation: auto; }
-::view-transition-old(root) { animation: fx-fade-out .18s ease both; }
-::view-transition-new(root) { animation: fx-rise .42s var(--ease-out) both; }
-::view-transition-group(zz-pill) { animation-duration: .5s; animation-timing-function: cubic-bezier(.3, 1.3, .5, 1); }
-::view-transition-group(zz-bar), ::view-transition-group(zz-logo) { animation-duration: .45s; animation-timing-function: var(--ease-out); }
+::view-transition-old(root) { animation: fx-fade-out .22s ease both; }
+::view-transition-new(root) { animation: fx-fade .28s ease both; }
+::view-transition-group(zz-pill) { animation-duration: .42s; animation-timing-function: cubic-bezier(.3, 1.3, .5, 1); }
+::view-transition-group(zz-bar), ::view-transition-group(zz-logo), ::view-transition-group(zz-nav) { animation-duration: .4s; animation-timing-function: var(--ease-out); }
+/* the labels stay crisp while the pill slides under them (no cross-fade flicker) */
+::view-transition-old(zz-nav) { animation: none; opacity: 0; }
+::view-transition-new(zz-nav) { animation: none; }
 .topbar .logo img, .m-logo img { view-transition-name: zz-logo; }
+.zz-links, .m-links { view-transition-name: zz-nav; }
 
 /* content arrives instead of blinking in (never on the play page) */
 body:not(.play-page) > main, .view { animation: fx-rise .6s var(--ease-out) .08s backwards; }
@@ -238,6 +242,19 @@ body:not(.play-page) > main, .view { animation: fx-rise .6s var(--ease-out) .08s
 .btn.fx-press::after {
   content: ""; position: absolute; left: var(--px, 50%); top: var(--py, 50%); width: 260px; height: 260px; border-radius: 50%;
   background: #fff; pointer-events: none; animation: fx-ripple .6s ease-out both;
+}
+
+/* ---------- Switching tabs ----------
+   The full intro (logo wipe, staggered cards) plays on the first page of a visit.
+   After that (html.fx-return, set in each page's <head>) pages appear right away:
+   a short fade-up with no waiting, and the dock doesn't drop in again. */
+.fx-return .topbar, .fx-return .m-nav { animation: none; }
+.fx-return .zz-h1::before, .fx-return .zz-h1::after { display: none; }
+.fx-return :is(.zz-brand, .channel-banner, .m-banner-title img, .m-title img) { animation: fx-fade .3s ease backwards; }
+.fx-return :is(body > main, .view, .zz-tag, .zz-find, .zz-panel, .zz-continue, .channel-tag, .channel-search, .m-tag, .m-hero .m-search, .m-panel,
+  .games-top .zz-search, .spot-main, .spot-side, .page-hero h1, .page-hero p, .req-card, .field, .chips button, .composer,
+  .watch-hero, .watch-poster, .watch-title, .watch-meta-line, .watch-genres, .watch-overview, .watch-actions, .gamble-hero, .gamble-hero h1, .stage, .game-title) {
+  animation-duration: .32s !important; animation-delay: 0s !important;
 }
 
 /* ---------- 7. Music page alignment ----------

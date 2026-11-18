@@ -416,11 +416,6 @@ body.play-page { overflow-x: hidden; -webkit-tap-highlight-color: transparent; t
 }
 .actions { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; }
 .actions + .icon-btn { margin-left: 0; }
-.btn.icon-only { width: 40px; height: 40px; padding: 0; }
-.btn.icon-only svg { display: block; }
-#mute.on { color: #ff9a8f; border-color: #ff6b5c66; background: #ff4a3c14; }
-#mute.cant { opacity: .5; }
-#mute.pop svg { animation: fx-pop .35s var(--spring); }
 
 /* The game frame keeps a true 16:9 shape (as on the old site): it gets narrower instead of
    stretching wider when the window is short. Phones get the old site's 3:4 frame. */
