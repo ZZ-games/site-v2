@@ -73,8 +73,6 @@
     banner.alt = mediaType === "movie" ? "Movies" : "TV";
     banner.hidden = false;
     $("browseTitle").textContent = "Popular now";
-    var tagEl = $("channelTag");
-    if (tagEl) tagEl.textContent = mediaType === "movie" ? "Movie night without leaving the tab." : "Shows to binge between rounds.";
     $("browseQ").placeholder = mediaType === "movie" ? "Search movies" : "Search TV shows";
     $("watchHero").hidden = true;
 
