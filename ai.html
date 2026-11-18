@@ -5,8 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AI · ZZ Games</title>
   <script>document.title = "ZZ Classroom";</script>
-  <script>try{if(sessionStorage.getItem("zz-seen"))document.documentElement.classList.add("fx-return");sessionStorage.setItem("zz-seen","1")}catch(e){}</script>
-  <script type="speculationrules">{"prerender":[{"where":{"selector_matches":".zz-links a, .m-links a, .zz-panel, .topbar .logo, .m-logo"},"eagerness":"moderate"}]}</script>
+  <script type="speculationrules">{"prefetch":[{"where":{"selector_matches":".zz-links a, .m-links a, .zz-panel, .topbar .logo, .m-logo"},"eagerness":"moderate"}]}</script>
   <script src="zz-guard.js?v=202611170"></script>
   <link rel="icon" type="image/svg+xml" href="tab/classroom.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="tab/classroom-32.png">
@@ -15,8 +14,8 @@
   <meta name="description" content="ZZ AI: chat with AI right on ZZ Games. Free.">
   <link rel="stylesheet" href="fonts/fonts.css">
   <script src="https://js.puter.com/v2/"></script>
-  <link rel="stylesheet" href="style.css?v=202611182">
-  <link rel="stylesheet" href="zz-fx.css?v=202611182">
+  <link rel="stylesheet" href="style.css?v=202611183">
+  <link rel="stylesheet" href="zz-fx.css?v=202611183">
   <link rel="expect" href="#fxReady" blocking="render">
 </head>
 <body class="ai-page">
@@ -35,7 +34,7 @@
   </header>
 
   <main class="ai">
-    <section class="page-hero ai-hero"><h1>ZZ AI</h1><p>Game picks, tips, ideas and answers. Ask it anything.</p></section>
+    <section class="page-hero ai-hero"><h1>AI</h1></section>
 
     <div class="chips" id="chips">
       <button type="button" data-q="Suggest a fun game for me to play next">Suggest a game</button>
@@ -69,7 +68,8 @@
       const input = document.getElementById("q");
       const sendBtn = document.getElementById("send");
 
-      const MODEL = "gpt-5.4-nano"; // fast; any Puter model name works here
+      // Claude Sonnet 5.5 answers. If it's unavailable (or the visitor hits its limit), the next one takes over.
+      const MODELS = ["anthropic/claude-sonnet-5-5", "anthropic/claude-haiku-5-5", "openai/gpt-5.4-nano"];
       const SYSTEM = "You are ZZ AI, the friendly assistant on the ZZ Games site (free browser games, music, movies and TV). Be concise, casual and fun. When suggesting games, pick ones on the site such as Slope, Retro Bowl, Minecraft, Geometry Dash Lite, Drift Boss, Subway Surfers, PolyTrack, Drive Mad or Paper.io 2.";
       let history = [{ role: "system", content: SYSTEM }];
       let busy = false;
@@ -124,7 +124,12 @@
         try {
           // the typing dots go away as soon as the first words arrive
           const onText = (g) => { ai.classList.remove("thinking"); ai.textContent = g; stick(); };
-          const got = await puterChat(history, MODEL, onText);
+          let got = "", lastErr = null;
+          for (const model of MODELS) {
+            try { got = await puterChat(history, model, onText); lastErr = null; break; }
+            catch (err) { lastErr = err; if (ai.textContent && !ai.classList.contains("thinking")) break; }   // stop if words already came in
+          }
+          if (lastErr) throw lastErr;
           if (!got.trim()) { ai.textContent = "(empty response — try again)"; ai.classList.add("err"); }
           else history.push({ role: "assistant", content: got });
         } catch (err) {

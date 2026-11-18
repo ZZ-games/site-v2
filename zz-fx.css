@@ -244,19 +244,6 @@ body:not(.play-page) > main, .view { animation: fx-rise .6s var(--ease-out) .08s
   background: #fff; pointer-events: none; animation: fx-ripple .6s ease-out both;
 }
 
-/* ---------- Switching tabs ----------
-   The full intro (logo wipe, staggered cards) plays on the first page of a visit.
-   After that (html.fx-return, set in each page's <head>) pages appear right away:
-   a short fade-up with no waiting, and the dock doesn't drop in again. */
-.fx-return .topbar, .fx-return .m-nav { animation: none; }
-.fx-return .zz-h1::before, .fx-return .zz-h1::after { display: none; }
-.fx-return :is(.zz-brand, .channel-banner, .m-banner-title img, .m-title img) { animation: fx-fade .3s ease backwards; }
-.fx-return :is(body > main, .view, .zz-tag, .zz-find, .zz-panel, .zz-continue, .channel-tag, .channel-search, .m-tag, .m-hero .m-search, .m-panel,
-  .games-top .zz-search, .spot-main, .spot-side, .page-hero h1, .page-hero p, .req-card, .field, .chips button, .composer,
-  .watch-hero, .watch-poster, .watch-title, .watch-meta-line, .watch-genres, .watch-overview, .watch-actions, .gamble-hero, .gamble-hero h1, .stage, .game-title) {
-  animation-duration: .32s !important; animation-delay: 0s !important;
-}
-
 /* ---------- 7. Music page alignment ----------
    music.css draws the Music app; these lines line its surfaces up with
    the rest of the site and give it the same motion. */

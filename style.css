@@ -156,8 +156,18 @@ main { padding: 0 clamp(16px, 4vw, 40px) 40px; max-width: 1400px; margin: 0 auto
 }
 .cont-card:hover, .cont-card:focus-visible { transform: translateY(-4px); border-color: #3f74ff; box-shadow: var(--glow); }
 .cont-card:active { transform: scale(.98); }
-.cont-bg { position: absolute; inset: -20px; z-index: -1; background: center / cover; filter: blur(22px) saturate(1.3) brightness(.35); transform: scale(1.1); transition: transform .8s var(--ease-out), filter .4s; }
-.cont-card:hover .cont-bg { transform: scale(1.22); filter: blur(22px) saturate(1.4) brightness(.45); }
+/* soft glow in the art's own colors: the art is stretched over the whole card and heavily
+   blurred, so the color spreads evenly instead of showing a zoomed-in smear */
+.cont-bg {
+  position: absolute; inset: -35%; z-index: -1; background-position: center; background-size: 100% 100%; background-repeat: no-repeat;
+  filter: blur(34px) saturate(1.5) brightness(.6); transition: transform .8s var(--ease-out), filter .4s;
+}
+.cont-card::after {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; border-radius: inherit;
+  background: linear-gradient(90deg, rgba(5, 10, 34, .25) 0%, rgba(5, 10, 34, .55) 60%, rgba(5, 10, 34, .7) 100%);
+  box-shadow: inset 0 1px 0 #ffffff14;
+}
+.cont-card:hover .cont-bg { transform: scale(1.12); filter: blur(34px) saturate(1.6) brightness(.72); }
 .cont-art { width: 70px; height: 70px; flex-shrink: 0; border-radius: 12px; background: center / cover; box-shadow: 0 8px 20px #000a, 0 0 0 1px #ffffff1a; transition: transform .45s var(--spring); }
 .k-movie .cont-art, .k-tv .cont-art { width: 50px; height: 72px; border-radius: 8px; }
 .k-song .cont-art { border-radius: 50%; animation: fx-spin 8s linear infinite paused; }
