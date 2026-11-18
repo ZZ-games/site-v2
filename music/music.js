@@ -521,6 +521,18 @@
     ytResolve(t).then((v) => { if (v && IOS) ytAudio(v); }).catch(() => {});
   }
   // Play the full song as plain audio; if that fails, YouTube's player, then the other sources
+  // the first full-song stream that responds within a few seconds (a stuck one is skipped)
+  async function workingStream(v) {
+    const quick = await Promise.race([ytAudio(v), new Promise((r) => setTimeout(() => r(null), 2500))]);
+    const list = [quick, ...INVHOSTS.slice(0, 2).map((h) => h + '/latest_version?id=' + encodeURIComponent(v) + '&itag=140&local=true')].filter(Boolean);
+    const probe = (u) => new Promise((res) => {
+      const ctl = new AbortController(), kill = setTimeout(() => { ctl.abort(); res(false); }, 4000);
+      fetch(u, { mode: 'no-cors', headers: { Range: 'bytes=0-1' }, signal: ctl.signal })
+        .then(() => { clearTimeout(kill); ctl.abort(); res(true); }, () => { clearTimeout(kill); res(false); });
+    });
+    for (const u of list) if (await probe(u)) return u;
+    return null;
+  }
   async function playFullAudio(v, tok, thenTry) {
     // the stream from the first family of servers (if it answers quickly), then audio passed through
     // the second family's servers (Invidious "local" mode, AAC itag 140)
@@ -620,7 +632,12 @@
     if (previewing) playAudioSource(t.pre, tok);
     const v = await ytResolve(t);
     if (tok !== P.tok) return;
-    if (v) { await switchTo(() => playFull(v, tok), tok, previewing); return; }
+    if (v && IOS && previewing) {
+      // iPad / iPhone: keep the preview playing until a full-song stream actually answers, then switch
+      const url = await workingStream(v);
+      if (tok !== P.tok) return;
+      if (url) { await switchTo(() => playAudioSource(url, tok, () => playFallback(t, tok)), tok, true); return; }
+    } else if (v) { await switchTo(() => playFull(v, tok), tok, previewing); return; }
     const alt = await findFullAlt(t, tok);   // the full song somewhere else; the preview keeps playing meanwhile
     if (tok !== P.tok) return;
     if (alt) { await switchTo(alt, tok, previewing); return; }
