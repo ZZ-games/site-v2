@@ -47,42 +47,39 @@
       pill.className = "fx-pill"; pill.setAttribute("aria-hidden", "true");
       bar.insertBefore(pill, links);
     }
+    // One smooth glide to whatever tab you point at. Leaving the tabs, it waits a beat and
+    // then eases back to the tab you're on, so sweeping across the bar never jerks.
     var here = function () { return links.querySelector("a.on"); };
-    var at = null, pos = null, stretchT = 0;
+    var at = null, backT = 0;
     var place = function (a, instant) {
+      clearTimeout(backT);
       at = a || null;
       tabs.forEach(function (t) { t.classList.toggle("fx-lit", t === a); });
       if (!a) { pill.style.opacity = 0; return; }
       var r = a.getBoundingClientRect(), b = bar.getBoundingClientRect();
       var x = r.left - b.left - bar.clientLeft, y = r.top - b.top - bar.clientTop;
-      var set = function (px, w) {
-        pill.style.width = w + "px"; pill.style.height = r.height + "px";
-        pill.style.transform = "translate(" + px + "px," + y + "px)";
-      };
-      clearTimeout(stretchT);
       pill.classList.toggle("fx-peek", a !== here());
-      if (instant || calm() || pos === null || pill.style.opacity === "0" || Math.abs(x - pos.x) < 2) {
-        if (instant) pill.style.transition = "none";
-        set(x, r.width); pill.style.opacity = 1;
-        if (instant) { void pill.offsetWidth; pill.style.transition = ""; }
-      } else {
-        // reach across to cover both tabs, then let go of the old one
-        var l = Math.min(x, pos.x), rt = Math.max(x + r.width, pos.x + pos.w);
-        pill.classList.add("fx-reach"); set(l, rt - l); pill.style.opacity = 1;
-        stretchT = setTimeout(function () { pill.classList.remove("fx-reach"); set(x, r.width); }, 160);
-      }
-      pos = { x: x, w: r.width };
+      if (instant || calm()) pill.style.transition = "none";
+      pill.style.width = r.width + "px"; pill.style.height = r.height + "px";
+      pill.style.transform = "translate(" + x + "px," + y + "px)";
+      pill.style.opacity = 1;
+      if (instant || calm()) { void pill.offsetWidth; pill.style.transition = ""; }
     };
-    var home = function () { pill.classList.remove("fx-squish"); place(here()); };
+    var home = function () {
+      pill.classList.remove("fx-squish");
+      clearTimeout(backT);
+      backT = setTimeout(function () { place(here()); }, 160);
+    };
     tabs.forEach(function (a) {
       a.addEventListener("pointerenter", function () { place(a); });
       a.addEventListener("focus", function () { place(a); });
       a.addEventListener("pointerdown", function () { place(a); pill.classList.add("fx-squish"); });
       a.addEventListener("pointerup", function () { pill.classList.remove("fx-squish"); });
+      a.addEventListener("pointercancel", function () { pill.classList.remove("fx-squish"); });
     });
     links.addEventListener("pointerleave", home);
     links.addEventListener("focusout", function (e) { if (!links.contains(e.relatedTarget)) home(); });
-    var settle = function () { place(at || here(), true); };
+    var settle = function () { var a = at || here(); clearTimeout(backT); place(a, true); };
     settle();
     addEventListener("resize", settle);
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(settle);

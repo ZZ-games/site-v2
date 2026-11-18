@@ -127,7 +127,7 @@ body { padding-top: var(--fx-bar-space, 84px); }
 }
 .zz-links a, .m-links a {
   position: relative; z-index: 1; padding: 8px 16px; border-radius: 999px; line-height: 20px; white-space: nowrap;
-  color: #9fb0e6; text-decoration: none; transition: color .25s, transform .2s var(--spring);
+  color: #9fb0e6; text-decoration: none; transition: color .4s ease, transform .35s var(--ease-out);
 }
 .zz-links a::after, .m-links a::after { display: none !important; }
 .zz-links a:hover, .m-links a:hover, .zz-links a.fx-lit, .m-links a.fx-lit { color: #fff; }
@@ -147,13 +147,14 @@ html:not(.fx) .zz-links a.on, html:not(.fx) .m-links a.on { color: #fff; }
   position: absolute; left: 0; top: 0; width: 0; height: 0; border-radius: 999px; pointer-events: none; opacity: 0;
   background: linear-gradient(180deg, var(--blue-hi), var(--blue-lo));
   box-shadow: 0 6px 16px #1b5cf04d, inset 0 1px 0 #ffffff40;
-  transition: transform .34s cubic-bezier(.3, 1.3, .5, 1), width .34s cubic-bezier(.3, 1.3, .5, 1),
-              height .2s, opacity .2s, scale .16s var(--ease), filter .2s;
+  /* one soft glide: fast start, long gentle landing, no overshoot */
+  transition: transform .5s cubic-bezier(.22, 1, .36, 1), width .5s cubic-bezier(.22, 1, .36, 1),
+              height .3s var(--ease-out), opacity .3s ease, scale .3s var(--ease-out), filter .35s ease;
+  will-change: transform, width;
   view-transition-name: zz-pill;
 }
-.fx-pill.fx-reach { transition: transform .16s cubic-bezier(.5, 0, .9, .6), width .16s cubic-bezier(.5, 0, .9, .6), opacity .2s, scale .16s, filter .2s; scale: 1 .82; }
-.fx-pill.fx-peek { filter: brightness(1.15) saturate(1.1); }
-.fx-pill.fx-squish { scale: .9 .84; }
+.fx-pill.fx-peek { filter: brightness(1.12) saturate(1.08); }
+.fx-pill.fx-squish { scale: .94; transition-duration: .5s, .5s, .3s, .3s, .12s, .35s; }
 
 /* things on the right side of the dock */
 .topbar .icon-btn {
@@ -301,6 +302,16 @@ body.music .card:hover .sleeve > img { transform: scale(1.1); }
 .tabs a { transition: color .2s, background .25s, transform .2s var(--spring); }
 .tabs a:active { transform: scale(.95); }
 .np { background: #03071c; border-left-color: var(--edge); }
+/* every Music hover eases out instead of snapping back */
+.row { transition: background .35s ease; }
+.row .r-n b, .r-play, .r-like, .r-more, .chip .x, .jb .x { transition: opacity .3s ease, color .3s ease, transform .3s var(--ease-out); }
+.link, .back, .r-a, .r-al a, .np-meta p a, .ph-head .meta a { transition: color .3s ease; }
+.bar-fill { transition: height .3s var(--ease-out), top .3s var(--ease-out); }
+.menu button, .menu a { transition: background .25s ease, color .25s ease; }
+.new-card .sleeve { transition: border-color .3s ease; }
+.m-ghost { transition: border-color .3s ease, background .3s ease; }
+body.music .card { transition: transform .6s var(--ease-out), border-color .45s, box-shadow .45s, background .45s; }
+body.music .card:hover { transition-duration: .35s; }
 .m-note, .m-ghost { background: var(--s1); border-color: var(--edge); }
 
 /* ---------- 8. Reduced motion (site setting or device setting) ---------- */

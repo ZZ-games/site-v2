@@ -38,8 +38,9 @@ main { padding: 0 clamp(16px, 4vw, 40px) 40px; max-width: 1400px; margin: 0 auto
   padding: 10px 18px; border-radius: 999px; color: #fff;
   background: linear-gradient(180deg, var(--blue-hi), var(--blue-lo));
   box-shadow: 0 6px 16px #0008, inset 0 1px 0 #ffffff33;
-  transition: transform .25s var(--spring), box-shadow .25s, filter .2s, border-color .2s, background-color .2s;
+  transition: transform .45s var(--ease-out), box-shadow .45s ease, filter .35s ease, border-color .35s ease, background-color .35s ease;
 }
+.btn:hover { transition: transform .3s var(--spring), box-shadow .3s ease, filter .2s ease, border-color .2s ease, background-color .2s ease; }
 .btn:hover { transform: translateY(-2px); filter: brightness(1.08); box-shadow: 0 10px 24px #000a, 0 6px 20px #1f5ff055, inset 0 1px 0 #ffffff4d; }
 .btn:active { transform: translateY(0) scale(.96); transition-duration: .08s; }
 .btn.ghost { background: transparent; color: var(--text); border: 1px solid var(--edge-hi); box-shadow: none; }
@@ -122,10 +123,10 @@ main { padding: 0 clamp(16px, 4vw, 40px) 40px; max-width: 1400px; margin: 0 auto
 @keyframes fx-drop-in { from { opacity: 0; transform: translateY(-8px) scale(.98); } }
 .fr-sec + .fr-sec { margin-top: 6px; padding-top: 6px; border-top: 1px solid #ffffff0d; }
 .fr-h { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px 6px; font: 700 .7rem var(--body); letter-spacing: 1.6px; text-transform: uppercase; color: var(--muted); }
-.fr-more { font-size: .72rem; letter-spacing: .3px; text-transform: none; color: var(--sky); padding: 2px 6px; border-radius: 6px; }
+.fr-more { font-size: .72rem; letter-spacing: .3px; text-transform: none; color: var(--sky); padding: 2px 6px; border-radius: 6px; transition: color .3s ease, background-color .3s ease; }
 .fr-more:hover, .fr-more:focus-visible { color: #fff; background: #ffffff10; }
 .fr-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px; }
-.fr-item { display: flex; align-items: center; gap: 12px; padding: 7px 10px 7px 7px; border-radius: 14px; outline: none; transition: background .15s, transform .25s var(--ease-out); animation: fx-rise .35s var(--ease-out) backwards; }
+.fr-item { display: flex; align-items: center; gap: 12px; padding: 7px 10px 7px 7px; border-radius: 14px; outline: none; transition: background .35s ease, transform .4s var(--ease-out); animation: fx-rise .35s var(--ease-out) backwards; }
 .fr-item:nth-child(2) { animation-delay: .03s; } .fr-item:nth-child(3) { animation-delay: .06s; } .fr-item:nth-child(4) { animation-delay: .09s; } .fr-item:nth-child(n+5) { animation-delay: .12s; }
 .fr-item:hover, .fr-item:focus-visible { background: #2466ff1f; transform: translateX(2px); }
 .fr-item:focus-visible { box-shadow: inset 0 0 0 1px var(--sky); }
@@ -152,9 +153,9 @@ main { padding: 0 clamp(16px, 4vw, 40px) 40px; max-width: 1400px; margin: 0 auto
 .cont-card {
   position: relative; display: flex; align-items: center; gap: 14px; height: 96px; padding: 12px 46px 12px 12px; overflow: hidden; isolation: isolate;
   border-radius: 18px; border: 1px solid var(--edge); background: var(--s1); color: var(--text); font: inherit; text-align: left; cursor: pointer;
-  box-shadow: var(--lit); transition: transform .35s var(--ease-out), border-color .3s, box-shadow .3s;
+  box-shadow: var(--lit); transition: transform .6s var(--ease-out), border-color .5s ease, box-shadow .5s ease;
 }
-.cont-card:hover, .cont-card:focus-visible { transform: translateY(-4px); border-color: #3f74ff; box-shadow: var(--glow); }
+.cont-card:hover, .cont-card:focus-visible { transform: translateY(-4px); border-color: #3f74ff; box-shadow: var(--glow); transition-duration: .3s; }
 .cont-card:active { transform: scale(.98); }
 /* soft glow in the art's own colors: the art is stretched over the whole card and heavily
    blurred, so the color spreads evenly instead of showing a zoomed-in smear */
@@ -168,7 +169,7 @@ main { padding: 0 clamp(16px, 4vw, 40px) 40px; max-width: 1400px; margin: 0 auto
   box-shadow: inset 0 1px 0 #ffffff14;
 }
 .cont-card:hover .cont-bg { transform: scale(1.12); filter: blur(34px) saturate(1.6) brightness(.72); }
-.cont-art { width: 70px; height: 70px; flex-shrink: 0; border-radius: 12px; background: center / cover; box-shadow: 0 8px 20px #000a, 0 0 0 1px #ffffff1a; transition: transform .45s var(--spring); }
+.cont-art { width: 70px; height: 70px; flex-shrink: 0; border-radius: 12px; background: center / cover; box-shadow: 0 8px 20px #000a, 0 0 0 1px #ffffff1a; transition: transform .6s var(--ease-out); }
 .k-movie .cont-art, .k-tv .cont-art { width: 50px; height: 72px; border-radius: 8px; }
 .k-song .cont-art { border-radius: 50%; animation: fx-spin 8s linear infinite paused; }
 .cont-card:hover .cont-art { transform: scale(1.06) rotate(-2deg); }
@@ -181,9 +182,9 @@ main { padding: 0 clamp(16px, 4vw, 40px) 40px; max-width: 1400px; margin: 0 auto
 .cont-go {
   position: absolute; right: 12px; top: 50%; width: 30px; height: 30px; margin-top: -15px; border-radius: 50%; display: grid; place-items: center;
   background: var(--blue); color: #fff; padding-left: 2px; box-shadow: 0 6px 14px #0009;
-  opacity: 0; transform: scale(.6); transition: opacity .25s, transform .4s var(--spring);
+  opacity: 0; transform: scale(.6); transition: opacity .4s ease, transform .45s var(--ease-out);
 }
-.cont-card:hover .cont-go, .cont-card:focus-visible .cont-go { opacity: 1; transform: none; }
+.cont-card:hover .cont-go, .cont-card:focus-visible .cont-go { opacity: 1; transform: none; transition: opacity .25s ease, transform .45s var(--spring); }
 .cont-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: #ffffff14; }
 .cont-bar i { display: block; height: 100%; background: var(--beam); transform-origin: left; animation: fx-fill 1s var(--ease-out) 1s backwards; }
 @media (hover: none) { .cont-go { opacity: .9; transform: none; } }
@@ -204,7 +205,7 @@ main { padding: 0 clamp(16px, 4vw, 40px) 40px; max-width: 1400px; margin: 0 auto
 .zz-panel:nth-child(4) { --tint: #1fa2ff; animation-delay: .80s; }
 .zz-panel:nth-child(5) { --tint: #58c4ff; animation-delay: .86s; }
 .zz-panel::before {
-  content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit; opacity: 0; transition: opacity .35s;
+  content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit; opacity: 0; transition: opacity .6s ease;
   background: radial-gradient(260px circle at var(--mx, 50%) var(--my, 0%), color-mix(in srgb, var(--tint) 24%, transparent), transparent 65%);
 }
 .zz-panel:hover::before { opacity: 1; }
@@ -217,15 +218,15 @@ main { padding: 0 clamp(16px, 4vw, 40px) 40px; max-width: 1400px; margin: 0 auto
 .zz-panel.nudge { animation: fx-nudge .45s ease; }
 .zz-panel-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; width: 100%; color: var(--faint); transition: color .3s; }
 .zz-panel.on .zz-panel-top { color: var(--tint); }
-.zz-panel-top > svg { flex-shrink: 0; transition: transform .5s var(--spring); }
+.zz-panel-top > svg { flex-shrink: 0; transition: transform .6s var(--ease-out); }
 .zz-panel.on .zz-panel-top > svg { transform: translateY(-3px) scale(1.04); }
 .zz-go {
   position: relative; display: grid; place-items: center; width: 38px; height: 38px; flex-shrink: 0; border-radius: 50%;
   background-color: var(--tint); color: #fff; box-shadow: 0 6px 16px #0009;
-  opacity: 0; transform: scale(.5) rotate(-90deg); transition: opacity .25s, transform .45s var(--spring);
+  opacity: 0; transform: scale(.5) rotate(-90deg); transition: opacity .35s ease, transform .5s var(--ease-out);
 }
 .zz-go svg { margin-left: 2px; }
-.zz-panel.on .zz-go { opacity: 1; transform: none; }
+.zz-panel.on .zz-go { opacity: 1; transform: none; transition: opacity .25s ease, transform .5s var(--spring); }
 .zz-panel-txt { display: flex; flex-direction: column; gap: 8px; }
 .zz-panel-name { font-family: var(--display); font-size: 1.55rem; line-height: 1.05; letter-spacing: .5px; white-space: nowrap; }
 .zz-panel-desc {
@@ -249,20 +250,22 @@ main { padding: 0 clamp(16px, 4vw, 40px) 40px; max-width: 1400px; margin: 0 auto
 /* ---------- 5. Cards + rails ---------- */
 .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(138px, 1fr)); }
 .card {
-  position: relative; display: block; overflow: hidden; border-radius: var(--r);
+  position: relative; z-index: 0; display: block; overflow: hidden; border-radius: var(--r);
   background: var(--s1); border: 1px solid var(--edge); box-shadow: var(--lit);
   transform: perspective(800px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
-  transition: transform .35s var(--ease-out), box-shadow .3s, border-color .3s, background .3s;
+  /* settling back is slower than lifting, and the card stays above its neighbours until it's back */
+  transition: transform .65s var(--ease-out), box-shadow .5s ease, border-color .5s ease, background .5s ease, z-index 0s linear .65s;
 }
 .card:hover {
   z-index: 2; background: var(--s2); border-color: #3f74ff; box-shadow: var(--glow);
   transform: perspective(800px) translateY(-6px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) scale(1.035);
+  transition: transform .3s var(--ease-out), box-shadow .3s ease, border-color .3s ease, background .3s ease, z-index 0s;
 }
 .card:active { transform: perspective(800px) scale(.97); transition-duration: .1s; }
 .card:focus-visible { outline: 3px solid var(--sky); outline-offset: 2px; }
 /* glare that sits where the pointer is */
 .card::after {
-  content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none; border-radius: inherit; opacity: 0; transition: opacity .3s;
+  content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none; border-radius: inherit; opacity: 0; transition: opacity .5s ease;
   background: radial-gradient(220px circle at var(--mx, 50%) var(--my, 0%), #ffffff22, transparent 60%);
 }
 .card:hover::after { opacity: 1; }
@@ -276,16 +279,17 @@ main { padding: 0 clamp(16px, 4vw, 40px) 40px; max-width: 1400px; margin: 0 auto
 .cover .initials { position: relative; z-index: 1; font-family: var(--display); font-size: 2.2rem; color: #ffffffdd; text-shadow: 0 2px 12px #0006; }
 .cover .soon { position: absolute; z-index: 2; top: 8px; right: 8px; font-size: .62rem; font-weight: 800; background: #000a; padding: 3px 8px; border-radius: 999px; color: var(--muted); }
 
-.play-ov { position: absolute; inset: 0; z-index: 1; display: grid; place-items: center; background: linear-gradient(180deg, #00030f00 30%, #00030fd9); opacity: 0; transition: opacity .3s; }
+.play-ov { position: absolute; inset: 0; z-index: 1; display: grid; place-items: center; background: linear-gradient(180deg, #00030f00 30%, #00030fd9); opacity: 0; transition: opacity .45s ease; }
 .play-ov span {
   position: relative; width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; padding-left: 3px;
   background: linear-gradient(180deg, var(--blue-hi), var(--blue-lo)); color: #fff; font-size: 1.1rem;
   box-shadow: 0 8px 20px #000b, inset 0 1px 0 #ffffff4d;
-  transform: scale(.5) translateY(12px); transition: transform .45s var(--spring);
+  transform: scale(.5) translateY(12px); transition: transform .45s var(--ease-out);   /* eases away, no bounce */
 }
 .play-ov span::after { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 2px solid #8ec5ff; opacity: 0; }
 .card:hover .play-ov { opacity: 1; }
-.card:hover .play-ov span { transform: none; }
+.card:hover .play-ov { transition-duration: .25s; }
+.card:hover .play-ov span { transform: none; transition: transform .45s var(--spring); }
 .card:hover .play-ov span::after { animation: fx-ring 1.4s ease-out .2s infinite; }
 
 .badge { position: absolute; z-index: 2; top: 8px; right: 8px; font: 800 .62rem var(--body); letter-spacing: 1px; padding: 4px 8px; border-radius: 99px; color: #fff; box-shadow: 0 2px 10px #0006; }
@@ -295,10 +299,10 @@ main { padding: 0 clamp(16px, 4vw, 40px) 40px; max-width: 1400px; margin: 0 auto
 .card .meta { position: relative; padding: 8px 10px 10px; }
 .card .meta::before {
   content: ""; position: absolute; left: 10px; right: 10px; top: 0; height: 2px; border-radius: 2px;
-  background: var(--beam); transform: scaleX(0); transform-origin: left; transition: transform .45s var(--ease-out);
+  background: var(--beam); transform: scaleX(0); transform-origin: right; transition: transform .55s var(--ease-out);
 }
-.card:hover .meta::before { transform: scaleX(1); }
-.card .name { font-weight: 600; font-size: .86rem; color: #d5e0ff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color .2s; }
+.card:hover .meta::before { transform: scaleX(1); transform-origin: left; transition-duration: .4s; }
+.card .name { font-weight: 600; font-size: .86rem; color: #d5e0ff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color .4s ease; }
 .card:hover .name { color: #fff; }
 .card .cat { color: var(--muted); font-size: .75rem; margin-top: 2px; }
 
@@ -313,7 +317,7 @@ main { padding: 0 clamp(16px, 4vw, 40px) 40px; max-width: 1400px; margin: 0 auto
 .rail-nav { margin-left: auto; display: flex; gap: 6px; }
 .rail-nav button {
   width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--edge); background: var(--s1); color: var(--text);
-  font-size: 1.2rem; line-height: 1; cursor: pointer; transition: transform .25s var(--spring), background .2s, border-color .2s;
+  font-size: 1.2rem; line-height: 1; cursor: pointer; transition: transform .45s var(--ease-out), background .35s ease, border-color .35s ease;
 }
 .rail-nav button:hover { background: var(--blue); border-color: var(--blue); transform: scale(1.12); }
 .rail-nav button:active { transform: scale(.9); }
@@ -325,7 +329,7 @@ main { padding: 0 clamp(16px, 4vw, 40px) 40px; max-width: 1400px; margin: 0 auto
 .music-hint {
   margin-left: auto; display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px;
   background: var(--s1); border: 1px solid var(--edge); color: var(--soft); font-size: .85rem; font-weight: 600;
-  transition: border-color .2s, color .2s, transform .25s var(--spring); animation: fx-pop .35s var(--ease-out);
+  transition: border-color .4s ease, color .4s ease, transform .45s var(--ease-out); animation: fx-pop .35s var(--ease-out);
 }
 .music-hint::before {
   content: ""; width: 14px; height: 14px; background: currentColor;
@@ -391,13 +395,13 @@ main { padding: 0 clamp(16px, 4vw, 40px) 40px; max-width: 1400px; margin: 0 auto
 
 .spot-side { display: flex; flex-direction: column; gap: 8px; padding: 14px; background: var(--s1); border: 1px solid var(--edge); border-radius: var(--r-lg); box-shadow: var(--lit); animation: fx-pop .7s var(--ease-out) .1s backwards; }
 .spot-side-title { font-family: var(--display); font-size: 1rem; padding: 2px 4px; color: var(--muted); }
-.pick { flex: 1; display: flex; align-items: center; gap: 12px; padding: 8px; border-radius: var(--r); transition: background .2s, transform .35s var(--ease-out); }
+.pick { flex: 1; display: flex; align-items: center; gap: 12px; padding: 8px; border-radius: var(--r); transition: background .4s ease, transform .55s var(--ease-out); }
 .pick:hover { background: #2466ff17; transform: translateX(4px); }
-.pick-art { width: 64px; height: 64px; flex-shrink: 0; border-radius: 12px; background-size: cover; background-position: center; transition: transform .45s var(--spring), box-shadow .3s; }
+.pick-art { width: 64px; height: 64px; flex-shrink: 0; border-radius: 12px; background-size: cover; background-position: center; transition: transform .55s var(--ease-out), box-shadow .45s ease; }
 .pick:hover .pick-art { transform: scale(1.08) rotate(-2deg); box-shadow: 0 8px 22px #000a; }
 .pick-meta { min-width: 0; flex: 1; }
 .pick-name { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.pick-play { width: 34px; height: 34px; flex-shrink: 0; border-radius: 50%; display: grid; place-items: center; background: #ffffff12; font-size: .8rem; transition: background .2s, transform .35s var(--spring); }
+.pick-play { width: 34px; height: 34px; flex-shrink: 0; border-radius: 50%; display: grid; place-items: center; background: #ffffff12; font-size: .8rem; transition: background .4s ease, transform .5s var(--ease-out); }
 .pick:hover .pick-play { background: var(--blue); transform: scale(1.12); }
 
 @media (max-width: 1000px) {
@@ -529,11 +533,12 @@ body.window-full .exit-full { display: block; animation: fx-drop .4s var(--ease-
 /* ---------- 9. Continue watching (home) ---------- */
 .cw-grid { grid-auto-columns: 160px; }
 .cw-card, .related-card {
-  position: relative; display: block; overflow: hidden; border-radius: 18px;
+  position: relative; z-index: 0; display: block; overflow: hidden; border-radius: 18px;
   background: var(--s1); border: 1px solid var(--edge); box-shadow: var(--lit);
-  transition: transform .35s var(--ease-out), border-color .3s, box-shadow .3s, background .3s;
+  transition: transform .65s var(--ease-out), border-color .5s ease, box-shadow .5s ease, background .5s ease, z-index 0s linear .65s;
 }
-.cw-card:hover, .related-card:hover { z-index: 2; transform: translateY(-6px) scale(1.03); background: var(--s2); border-color: #3f74ff; box-shadow: var(--glow); }
+.cw-card:hover, .related-card:hover { z-index: 2; transform: translateY(-6px) scale(1.03); background: var(--s2); border-color: #3f74ff; box-shadow: var(--glow);
+  transition: transform .3s var(--ease-out), border-color .3s ease, box-shadow .3s ease, background .3s ease, z-index 0s; }
 .cw-card::after, .related-card::after {
   content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none; border-radius: inherit; opacity: 0; transition: opacity .3s;
   background: radial-gradient(220px circle at var(--mx, 50%) var(--my, 0%), #ffffff1c, transparent 60%);
@@ -615,7 +620,7 @@ main.ai { max-width: 860px; padding-top: 10px; display: flex; flex-direction: co
 .chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 24px 0 18px; }
 .chips button {
   background: var(--s1); color: var(--soft); border: 1px solid var(--edge); border-radius: 999px; padding: 9px 15px; cursor: pointer;
-  font: 600 .84rem var(--body); transition: border-color .2s, color .2s, background .2s, transform .3s var(--spring);
+  font: 600 .84rem var(--body); transition: border-color .4s ease, color .4s ease, background .4s ease, transform .5s var(--ease-out);
   animation: fx-rise .5s var(--ease-out) backwards;
 }
 .chips button:nth-child(1) { animation-delay: .25s; } .chips button:nth-child(2) { animation-delay: .3s; } .chips button:nth-child(3) { animation-delay: .35s; }
