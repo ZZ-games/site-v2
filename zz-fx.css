@@ -321,10 +321,5 @@ body.music .card:hover { transition-duration: .35s; }
 }
 .reduce-motion .fx-bg { display: none; }
 .reduce-motion .fx-wait { opacity: 1; transform: none; filter: none; }
-@media (prefers-reduced-motion: reduce) {
-  @view-transition { navigation: none; }
-  *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
-  .fx-bg { display: none; }
-  .fx-wait { opacity: 1; transform: none; filter: none; }
-  .fx-pill { view-transition-name: none; }
-}
+/* Devices set to reduce motion keep the animations (Settings → Reduce animations turns them off);
+   zz-fx.js drops the card tilt, background drift and parallax for them. */
