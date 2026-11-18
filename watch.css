@@ -70,12 +70,7 @@
 /* channel header (Movies / TV browse) */
 #browseWrap { margin-top: 0; }
 .channel-head { display: flex; flex-direction: column; align-items: center; gap: 18px; text-align: center; margin: 0 auto 14px; padding-top: clamp(18px, 3.5vw, 44px); }
-.channel-banner, .channel-wordmark { width: min(460px, 84vw); aspect-ratio: 2180 / 720; filter: drop-shadow(0 14px 30px #000b); animation: fx-wipe .9s cubic-bezier(.65, 0, .2, 1) backwards; }
-.channel-banner { display: block; height: auto; }
-.channel-wordmark {
-  display: grid; place-items: center; font-family: var(--display); font-size: calc(min(460px, 84vw) * .215); line-height: 1; letter-spacing: 2px;
-  background: linear-gradient(180deg, #8ec5ff 0%, var(--blue-hi) 55%, #22d3ee 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
-}
+.channel-banner { display: block; width: min(460px, 84vw); height: auto; aspect-ratio: 2180 / 720; filter: drop-shadow(0 14px 30px #000b); animation: fx-wipe .9s cubic-bezier(.65, 0, .2, 1) backwards; }
 .channel-tag { margin: 0; max-width: 520px; color: var(--soft); font-size: 1.05rem; line-height: 1.5; animation: fx-rise .6s var(--ease-out) .4s backwards; }
 .channel-tag:empty { display: none; }
 .channel-search { margin-top: 4px; animation: fx-rise .6s var(--ease-out) .5s backwards; }

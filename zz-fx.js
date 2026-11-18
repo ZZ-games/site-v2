@@ -237,6 +237,7 @@
     if (!running) return;
     requestAnimationFrame(frame);
     if (now - lastDraw < 31) return;          // ~30fps is plenty for a backdrop
+    if (body.classList.contains("games-overlay")) return;   // Music page hidden behind another page
     lastDraw = now;
     var t = now - t0;
     var sy = (window.scrollY || 0) * PARALLAX;
