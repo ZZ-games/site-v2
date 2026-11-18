@@ -77,6 +77,7 @@
   const slim = (t) => ({ id: t.id, src: t.src, t: t.t, a: t.a, aid: t.aid || '', al: t.al || '', alid: t.alid || '', art: t.art || '', big: t.big || '', d: t.d || 0, ex: !!t.ex, ver: !!t.ver, g: t.g || '', file: t.file || '', license: t.license || '', licenseUrl: t.licenseUrl || '', archiveUrl: t.archiveUrl || '', pre: t.pre || '' });
 
   function remember(item) {
+    item.at = Date.now();
     S.activity = [item, ...S.activity.filter((a) => !(a.k === item.k && a.id === item.id))].slice(0, 30);
     save('activity');
   }
@@ -357,15 +358,44 @@
 
   /* --- YouTube engine: catalogue songs play from their official uploads (like aa-games-hub) --- */
   const YTHOSTS = ['https://pipedapi.private.coffee', 'https://pipedapi.ducks.party', 'https://pipedapi.kavin.rocks', 'https://pipedapi.adminforge.de'];
-  const ytc = store.get('ytv', {}); // track id → [videoId, savedAt], a persistent lookup cache
-  const ytcFail = {};               // track id → time of last failed lookup (memory only)
-  const saveYt = () => { const ks = Object.keys(ytc); if (ks.length > 600) for (const k of ks.slice(0, ks.length - 600)) delete ytc[k]; store.set('ytv', ytc); };
-  let ytToastShown = false;
+  // v2: older lookups could match the wrong song, so they're dropped
+  try { localStorage.removeItem('zzs:ytv'); } catch { /* ignore */ }
+  const ytc = store.get('ytv2', {}); // track id → [videoId, savedAt], a persistent lookup cache
+  const ytcFail = {};                // track id → time of last failed lookup (memory only)
+  const saveYt = () => { const ks = Object.keys(ytc); if (ks.length > 600) for (const k of ks.slice(0, ks.length - 600)) delete ytc[k]; store.set('ytv2', ytc); };
+  // Strip the noise uploads add around a song title: (Official Video), [Lyrics], feat. credits, etc.
+  const songName = (v) => normAudio(String(v || '')
+    .replace(/[([](?:[^)\]]*?)(?:feat|ft\.|with |official|lyric|audio|video|visuali[sz]er|remaster|explicit|clean|hd|4k|mv)[^)\]]*[)\]]/gi, ' ')
+    .replace(/\b(?:feat|ft)\.?\s.*$/i, ' ')
+    .replace(/\b(?:official|music video|lyric video|lyrics?|audio|visuali[sz]er|hd|4k)\b/gi, ' '));
+  const ALT = /\b(remix|cover|live|sped up|slowed|reverb|nightcore|karaoke|instrumental|8d|acoustic|edit|version|mashup|bass boosted)\b/i;
+  function pickVideo(items, t) {
+    const want = songName(t.t), wantA = normAudio(t.a), firstA = normAudio(String(t.a || '').split(/,|&| x | feat/i)[0]);
+    if (!want) return null;
+    const wd = t.d || 0, altOK = ALT.test(t.t);
+    let best = null, bs = -1;
+    for (const x of items.slice(0, 10)) {
+      const raw = x.title || '', who = normAudio((x.uploader || x.uploaderName || '').replace(/\s*-\s*topic$/i, ''));
+      if (!altOK && ALT.test(raw)) continue;                         // a remix / cover / live take isn't the song
+      let xt = songName(raw);
+      for (const a of [wantA, firstA]) if (a) xt = xt.replace(a, ' ').replace(/\s+/g, ' ').trim();   // "Drake - Hotline Bling" → "hotline bling"
+      const exact = xt === want;
+      const close = !exact && want.length >= 4 && (xt.startsWith(want + ' ') || xt.endsWith(' ' + want) || xt.includes(' ' + want + ' '));
+      if (!exact && !close) continue;                                // the title has to be this song
+      const artistOK = !!firstA && (who.includes(firstA) || normAudio(raw).includes(firstA));
+      const xd = Math.round(x.duration || 0);
+      if (wd && xd && Math.abs(xd - wd) > Math.max(20, wd * .15)) continue;   // way off on length: different track
+      if (!artistOK && !(exact && wd && xd && Math.abs(xd - wd) <= 6)) continue;
+      const sc = (exact ? 6 : 3) + (artistOK ? 4 : 0) + (/topic$/i.test(x.uploader || x.uploaderName || '') ? 1 : 0) + (wd && xd ? Math.max(0, 2 - Math.abs(xd - wd) / 5) : 0);
+      if (sc > bs) { bs = sc; best = x; }
+    }
+    return best;
+  }
   async function ytResolve(t) {
     const hit = ytc[t.id];
     if (hit && Date.now() - hit[1] < 30 * 864e5) return hit[0];
     if (ytcFail[t.id] && Date.now() - ytcFail[t.id] < 10 * 60e3) return null;
-    const q = enc([t.a, t.t].filter(Boolean).join(' ') + ' official audio');
+    const q = enc([t.a, songName(t.t) || t.t].filter(Boolean).join(' '));
     for (const host of YTHOSTS) {
       try {
         const r = await fetch(host + '/search?q=' + q + '&filter=music_songs', { signal: AbortSignal.timeout(9000) });
@@ -373,24 +403,16 @@
         const j = await r.json();
         const items = (j.items || []).filter((x) => x.url && x.type === 'stream');
         if (!items.length) continue;
-        const want = normAudio(t.t), wantA = normAudio(t.a), wd = t.d || 0;
-        let best = null, bs = -1;
-        for (const x of items.slice(0, 8)) {
-          const xt = normAudio(x.title || ''), xd = Math.round(x.duration || 0), who = x.uploader || x.uploaderName || '';
-          const s = (xt === want ? 6 : xt.includes(want) || want.includes(xt) ? 3 : 0)
-            + (wantA && who.toLowerCase().includes(wantA) ? 3 : /\b(topic|vevo|official|records)\b/i.test(who) ? 2 : 0)
-            + (wd && xd ? Math.max(0, 2 - Math.abs(xd - wd) / 10) : 0);
-          if (s > bs) { bs = s; best = x; }
-        }
-        if (best && bs >= 3) {
-          const v = String(best.url).split('v=')[1] || '';
-          if (v) { ytc[t.id] = [v, Date.now()]; saveYt(); return v; }
-        }
+        const best = pickVideo(items, t);
+        const v = best ? (String(best.url).split('v=')[1] || '').split('&')[0] : '';
+        if (v) { ytc[t.id] = [v, Date.now()]; saveYt(); return v; }
+        break;   // a working host found nothing that is really this song: don't guess
       } catch { /* next host */ }
     }
     ytcFail[t.id] = Date.now();
     return null;
   }
+  const ytForget = (t) => { if (t && ytc[t.id]) { delete ytc[t.id]; saveYt(); } if (t) ytcFail[t.id] = Date.now(); };
   let ytApi = null, ytNP = null, ytN = 0;
   const ytCur = () => ytNP;
   function loadYT() {
@@ -409,9 +431,8 @@
   async function playYT(v, tok) {
     if (tok !== P.tok) return;
     P.eng = 'yt';
-    try { await loadYT(); } catch { if (tok === P.tok) failSkip('YouTube didn’t load — trying something else', tok); return; }
+    try { await loadYT(); } catch { if (tok === P.tok) playFallback(P.cur, tok); return; }
     if (tok !== P.tok) return;
-    if (!ytToastShown) { toast('Full songs play from their official YouTube uploads'); ytToastShown = true; }
     const host = $('#npVid');
     host.innerHTML = '<div id="ytp' + (++ytN) + '"></div>';
     const player = new YT.Player('ytp' + ytN, {
@@ -426,7 +447,7 @@
           else if (e.data === 0) { if (P.mode === 'song') onEnded(); else setPlaying(false); }
           else if (e.data === 3) setBuffering(true);
         },
-        onError: () => { if (P.eng === 'yt') { stopEngines(); failSkip('YouTube couldn’t play that one — moving on', P.tok); } },
+        onError: () => { if (P.eng === 'yt' && tok === P.tok) { ytForget(P.cur); stopEngines(); P.eng = 'audio'; playFallback(P.cur, tok); } },
       },
     });
     ytNP = player;
@@ -438,7 +459,7 @@
     const tok = ++P.tok;
     P.cur = t; P.mode = 'song';
     stopEngines();
-    setNow({ title: t.t, sub: t.src === 'ia' ? t.a + ' · Internet Archive · ' + t.license : t.a, subHref: t.src === 'ia' ? t.archiveUrl : (t.aid ? '#/artist/' + t.aid : ''), art: t.big || t.art, small: t.art, seed: t.t });
+    setNow({ title: t.t, sub: t.a, subHref: t.src === 'ia' ? t.archiveUrl : (t.aid ? '#/artist/' + t.aid : ''), art: t.big || t.art, small: t.art, seed: t.t });
     setBuffering(true); markCurrent(); renderQueue(); bumpTaste(t);
     remember({ k: 'song', id: t.id, t: t.t, s: t.a, img: t.art, ref: slim(t) });
     if (t.src === 'dz') {
@@ -448,18 +469,24 @@
     }
     if (t.src === 'au') { await playAudioSource(AU + '/tracks/' + t.id.slice(2) + '/stream?' + APP, tok); return; }
     if (t.src === 'ia') { await playAudioSource(IA + '/download/' + enc(t.id.slice(2)) + '/' + t.file, tok); return; }
+    await playFallback(t, tok);
+  }
+  // Other places to find the same song, quietly, in order: Audius, Internet Archive, the 30s preview
+  async function playFallback(t, tok) {
+    if (!t || tok !== P.tok) return;
     try {
       const match = await findAudiusVersion(t);
       if (tok !== P.tok) return;
-      if (match) { toast('Playing full track from Audius'); await playAudioSource(AU + '/tracks/' + match.id + '/stream?' + APP, tok); return; }
+      if (match) { await playAudioSource(AU + '/tracks/' + match.id + '/stream?' + APP, tok); return; }
     } catch { /* try Internet Archive next */ }
     try {
       const archiveMatch = await findArchiveVersion(t);
       if (tok !== P.tok) return;
-      if (archiveMatch) { setNow({ title: t.t, sub: t.a + ' · Internet Archive · ' + archiveMatch.license, subHref: archiveMatch.archiveUrl, art: t.big || t.art, small: t.art, seed: t.t }); toast('Playing openly licensed audio from Internet Archive · ' + archiveMatch.license); await playAudioSource(IA + '/download/' + enc(archiveMatch.id.slice(2)) + '/' + archiveMatch.file, tok); return; }
+      // keep a link to the source page (the license asks for credit) without announcing it
+      if (archiveMatch) { setNow({ title: t.t, sub: t.a, subHref: archiveMatch.archiveUrl, art: t.big || t.art, small: t.art, seed: t.t }); await playAudioSource(IA + '/download/' + enc(archiveMatch.id.slice(2)) + '/' + archiveMatch.file, tok); return; }
     } catch { /* fall back to the short preview */ }
     if (tok !== P.tok) return;
-    if (t.pre) { toast('Only a short preview was available for this one'); await playAudioSource(t.pre, tok); return; }
+    if (t.pre) { await playAudioSource(t.pre, tok); return; }
     if (tok === P.tok) failSkip('Couldn’t find a playable version of “' + t.t + '”', tok);
   }
 
@@ -580,6 +607,7 @@
     $('#bar').hidden = true; document.body.classList.remove('playing-bar');
     drawer(false);
     markCurrent(); renderQueue();
+    dispatchEvent(new Event('zzmusic:closed'));
   }
 
   /* ================= now-playing UI ================= */
@@ -627,8 +655,8 @@
       $('#bar').hidden = false;
       document.body.classList.add('playing-bar');
       paintPanel();
-    } else {
-      // Keep the compact player out of the way whenever audio is paused or stopped.
+    } else if (!P.mode) {
+      // nothing loaded: no bar. Paused: keep it, so you can press play again from any page.
       $('#bar').hidden = true;
       document.body.classList.remove('playing-bar');
     }
@@ -1207,4 +1235,18 @@
   const q0 = new URLSearchParams(location.search).get('q');
   if (q0 && !location.hash) location.hash = '#/search?q=' + enc(q0.slice(0, 80));
   route();
+
+  // The rest of the site talks to the player through this (pages open inside the Music shell)
+  window.ZZMusic = {
+    active: () => !!P.mode,
+    playing: () => !!P.playing,
+    play: (t, list) => { if (!t) return; const l = (list && list.length ? list : [t]); playList(l, Math.max(0, l.findIndex((x) => x.id === t.id))); },
+    pauseForVideo: () => { if (P.mode && P.playing) { pause(); P.videoPaused = true; } },
+    resumeAfterVideo: () => { if (P.videoPaused) { P.videoPaused = false; if (P.mode && !P.playing) toggle(); } },
+  };
+  // a song picked on another page (search, Continue) waits here for the player
+  try {
+    const raw = sessionStorage.getItem('zz-play-now');
+    if (raw) { sessionStorage.removeItem('zz-play-now'); const t = JSON.parse(raw); if (t && t.id) window.ZZMusic.play(t); }
+  } catch { /* ignore */ }
 })();

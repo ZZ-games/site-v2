@@ -12,13 +12,14 @@
   <link rel="icon" type="image/png" sizes="192x192" href="tab/classroom-192.png">
   <meta name="description" content="Play free browser games on ZZ Games.">
   <link rel="stylesheet" href="fonts/fonts.css">
-  <link rel="stylesheet" href="style.css?v=202611172">
-  <link rel="stylesheet" href="zz-fx.css?v=202611176">
+  <link rel="stylesheet" href="style.css?v=202611181">
+  <link rel="stylesheet" href="zz-fx.css?v=202611181">
 </head>
 <body class="play-page">
-  <header class="topbar zz-nav play-topbar">
+  <header class="topbar">
     <a href="index.html" class="logo"><img src="logo-flat.png?v=2" alt="ZZ Games"></a>
-    <nav class="zz-links play-links" aria-label="Main">
+    <span class="fx-pill" aria-hidden="true"></span>
+    <nav class="zz-links" aria-label="Main">
       <a href="games.html" class="on" aria-current="page">Games</a>
       <a href="music.html">Music</a>
       <a href="watch.html?type=movie&id=popular">Movies</a>
@@ -27,24 +28,25 @@
     </nav>
     <h1 id="gameTitle" class="game-title"></h1>
     <div class="actions">
+      <button id="mute" class="btn ghost icon-only" type="button" title="Mute game" aria-label="Mute game"></button>
       <button id="reload" class="btn ghost" title="Restart">Restart</button>
       <button id="full" class="btn" title="Fullscreen">Fullscreen</button>
     </div>
   </header>
 
-  <main class="stage-wrap play-layout">
+  <main class="stage-wrap">
     <div class="play-col">
       <div id="versions" class="versions" hidden></div>
       <div id="stage" class="stage">
-        <div id="loader" class="loader"><div class="spinner"></div><p>Loading game…</p></div>
+        <div id="loader" class="loader"><div class="loader-art"></div><div class="spinner"></div><p>Loading game…</p></div>
         <iframe id="frame" sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-pointer-lock allow-downloads allow-orientation-lock allow-presentation allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation" allow="fullscreen; autoplay; gamepad; clipboard-write" allowfullscreen></iframe>
       </div>
       <p class="hint">Game not working? <a id="report" href="request.html?type=broken">Report a problem</a></p>
     </div>
   </main>
 
-  <script src="games.js?v=202611177"></script>
-  <script src="app.js?v=202611179"></script>
-  <script src="zz-fx.js?v=202611176"></script>
+  <script src="games.js?v=202611181"></script>
+  <script src="app.js?v=202611181"></script>
+  <script src="zz-fx.js?v=202611181"></script>
 </body>
 </html>

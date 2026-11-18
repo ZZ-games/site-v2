@@ -62,6 +62,8 @@ function saveProgress(mediaType, tmdbId, season, episode, position, duration, ex
     title: (extra && extra.title) || "",
     poster_path: (extra && extra.poster_path) || "",
   };
+  var keys = Object.keys(store).sort(function (a, b) { return (store[b].updated_at || 0) - (store[a].updated_at || 0); });
+  keys.slice(120).forEach(function (k) { delete store[k]; });
   _saveProgressStore(store);
 }
 
@@ -71,11 +73,34 @@ function deleteProgress(mediaType, tmdbId, season, episode) {
   _saveProgressStore(store);
 }
 
+// One entry per movie / show (the most recent episode wins), newest first.
+// Progress is still saved per episode so each episode resumes at the right spot.
 function getRecentProgress(limit) {
-  var store = _loadProgress();
-  return Object.values(store)
-    .sort(function (a, b) { return b.updated_at - a.updated_at; })
+  var store = _loadProgress(), best = {};
+  Object.keys(store).forEach(function (k) {
+    var p = store[k];
+    if (!p || !p.tmdb_id) return;
+    var id = p.media_type + "-" + p.tmdb_id;
+    if (!best[id] || (p.updated_at || 0) > (best[id].updated_at || 0)) best[id] = p;
+  });
+  return Object.keys(best).map(function (k) { return best[k]; })
+    .sort(function (a, b) { return (b.updated_at || 0) - (a.updated_at || 0); })
     .slice(0, limit || 6);
+}
+
+// The season / episode last picked for each show, so a show reopens where you were
+var PICK_KEY = "zz-watch-picks";
+function getLastPick(tvId) {
+  try { return (JSON.parse(localStorage.getItem(PICK_KEY)) || {})[tvId] || null; } catch (e) { return null; }
+}
+function saveLastPick(tvId, season, episode) {
+  try {
+    var all = JSON.parse(localStorage.getItem(PICK_KEY)) || {};
+    all[tvId] = { s: +season || 1, e: +episode || 1, at: Date.now() };
+    var keys = Object.keys(all).sort(function (a, b) { return all[b].at - all[a].at; });
+    keys.slice(60).forEach(function (k) { delete all[k]; });
+    localStorage.setItem(PICK_KEY, JSON.stringify(all));
+  } catch (e) {}
 }
 
 // TMDB helpers

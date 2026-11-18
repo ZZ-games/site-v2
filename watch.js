@@ -67,17 +67,11 @@
     var md = document.querySelector('meta[name="description"]');
     if (md) md.content = label + " — stream free on ZZ Games.";
 
-    // Channel banner: MOVIES image for the movies tab, gradient TV wordmark for TV
-    if (mediaType === "movie") {
-      var banner = $("channelBanner");
-      banner.src = "banner-movies.png?v=202611164";
-      banner.alt = "Movies";
-      banner.hidden = false;
-    } else {
-      var wm = $("channelWordmark");
-      wm.textContent = "TV";
-      wm.hidden = false;
-    }
+    // Channel banner: MOVIES logo for the movies tab, TV logo for TV
+    var banner = $("channelBanner");
+    banner.src = mediaType === "movie" ? "banner-movies.png?v=202611181" : "banner-tv.png?v=202611181";
+    banner.alt = mediaType === "movie" ? "Movies" : "TV";
+    banner.hidden = false;
     $("browseTitle").textContent = "Popular now";
     var tagEl = $("channelTag");
     if (tagEl) tagEl.textContent = mediaType === "movie" ? "Movie night without leaving the tab." : "Shows to binge between rounds.";
@@ -251,21 +245,35 @@
       seasonSelect.innerHTML = realSeasons.map(function (s) {
         return '<option value="' + s.season_number + '">Season ' + s.season_number + '</option>';
       }).join("");
-      currentSeason = realSeasons.length ? realSeasons[0].season_number : 1;
+      // Start where you left off: a link's ?s=&e=, else the episode you last picked, else season 1
+      var want = startingEpisode();
+      var has = function (n) { return realSeasons.some(function (x) { return x.season_number === n; }); };
+      currentSeason = want && has(want.s) ? want.s : (realSeasons.length ? realSeasons[0].season_number : 1);
+      seasonSelect.value = currentSeason;
 
       seasonSelect.addEventListener("change", function () {
         currentSeason = +this.value;
-        loadEpisodes(currentSeason);
+        loadEpisodes(currentSeason, 1);
       });
       episodeSelect.addEventListener("change", function () {
         currentEpisode = +this.value;
+        rememberPick();
       });
 
-      loadEpisodes(currentSeason);
+      loadEpisodes(currentSeason, want && want.s === currentSeason ? want.e : 0);
     }
   }
 
-  function loadEpisodes(season) {
+  function startingEpisode() {
+    var s = +params.get("s"), e = +params.get("e");
+    if (s > 0) return { s: s, e: e > 0 ? e : 1 };
+    return getLastPick(tmdbId);
+  }
+  function rememberPick() {
+    if (mediaType === "tv") saveLastPick(tmdbId, currentSeason, currentEpisode);
+  }
+
+  function loadEpisodes(season, wantEpisode) {
     var episodeSelect = $("episodePick");
     episodeSelect.innerHTML = '<option>Loading…</option>';
     tmdbFetch("/tv/" + tmdbId + "/season/" + season)
@@ -273,6 +281,7 @@
         if (!data.episodes || !data.episodes.length) {
           episodeSelect.innerHTML = '<option value="1">Episode 1</option>';
           currentEpisode = 1;
+          if (wantEpisode) rememberPick();
           return;
         }
         episodeSelect.innerHTML = data.episodes.map(function (ep) {
@@ -280,7 +289,10 @@
           if (ep.name) label += " — " + ep.name;
           return '<option value="' + ep.episode_number + '">' + label + '</option>';
         }).join("");
-        currentEpisode = data.episodes[0].episode_number;
+        var hasWanted = wantEpisode && data.episodes.some(function (ep) { return ep.episode_number === wantEpisode; });
+        currentEpisode = hasWanted ? wantEpisode : data.episodes[0].episode_number;
+        episodeSelect.value = currentEpisode;
+        if (wantEpisode) rememberPick();   // a season the viewer picked counts as their choice
       })
       .catch(function () {
         episodeSelect.innerHTML = '<option value="1">Episode 1</option>';
@@ -307,6 +319,13 @@
     overlay.hidden = false;
     document.body.style.overflow = "hidden";
     $("overlayClose").focus();
+    rememberPick();
+    musicShell(function (m) { m.pauseForVideo(); });
+  }
+
+  // When the site is playing music (the Music player wraps the page), a movie or show pauses it
+  function musicShell(fn) {
+    try { if (window.parent !== window && window.parent.ZZMusic) fn(window.parent.ZZMusic); } catch (e) {}
   }
 
   function buildEmbedUrl(baseUrl, kind, id, opts) {
@@ -336,6 +355,7 @@
     overlay.hidden = true;
     document.body.style.overflow = "";
     if (triggerEl) { triggerEl.focus(); triggerEl = null; }
+    musicShell(function (m) { m.resumeAfterVideo(); });
   }
 
   // Close on Escape
@@ -435,9 +455,11 @@
           var ep = $("episodePick");
           if (sp) sp.value = currentSeason;
           if (ep) ep.value = currentEpisode;
+          rememberPick();
         } else {
           currentSeason = d.season || currentSeason;
           currentEpisode = d.episode || currentEpisode;
+          rememberPick();
           openOverlay(mediaType, tmdbId, { season: currentSeason, episode: currentEpisode });
         }
         break;

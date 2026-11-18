@@ -14,7 +14,7 @@
   <meta name="theme-color" content="#020414">
   <link rel="stylesheet" href="fonts/fonts.css">
   <link rel="stylesheet" href="music/music.css?v=202611185">
-  <link rel="stylesheet" href="zz-fx.css?v=202611176">
+  <link rel="stylesheet" href="zz-fx.css?v=202611181">
   <link rel="expect" href="#fxReady" blocking="render">
 </head>
 <body class="music">
@@ -35,7 +35,7 @@
 
     <section class="m-hero" id="mhero">
       <p class="m-eyebrow" id="mGreet">Music</p>
-      <h1 class="m-title m-banner-title"><img src="banner-music.png" alt="Music"></h1>
+      <h1 class="m-title m-banner-title"><img src="banner-music.png?v=202611181" alt="Music"></h1>
       <p class="m-tag">Put something on while you play. Full songs, live radio and lofi.</p>
       <form class="m-search" id="mfind" role="search">
         <label class="sr-only" for="mq">Search music</label>
@@ -116,86 +116,107 @@
   <div class="toasts" id="toasts" aria-live="polite"></div>
   <dialog id="dlg"></dialog>
   <style>
-    #gameShell { position:fixed; inset:0 0 var(--bar) 0; z-index:40; background:#020414; }
-    #gameShell[hidden] { display:none; }
-    #gameFrame { display:block; width:100%; height:100%; border:0; background:#020414; }
-    body.games-overlay { overflow:hidden; }
-    body.games-overlay > .m-top,
-    body.games-overlay > .m-note,
-    body.games-overlay > .m-main { visibility:hidden; pointer-events:none; }
+    /* Site shell: while a song is loaded, other pages open here so the music keeps playing */
+    #gameShell { position: fixed; inset: 0; z-index: 41; background: #00030f; }
+    body.playing-bar #gameShell { bottom: var(--bar); }
+    #gameFrame { display: block; width: 100%; height: 100%; border: 0; background: #00030f; }
+    body.games-overlay { overflow: hidden; padding-top: 0 !important; }
+    body.games-overlay > .m-top, body.games-overlay > .m-note, body.games-overlay > .m-main, body.games-overlay > .fx-bg { visibility: hidden; pointer-events: none; }
   </style>
-  <script src="music/music.js?v=202611186"></script>
+  <script src="music/music.js?v=202611181"></script>
   <script>
     (() => {
       const shell = document.getElementById('gameShell');
       const frame = document.getElementById('gameFrame');
+      const PAGES = ['index.html', 'games.html', 'play.html', 'watch.html', 'ai.html', 'request.html', 'gamble.html'];
+      const music = () => window.ZZMusic;
+      const fileOf = (u) => u.pathname.split('/').pop() || 'index.html';
+      const sitePage = (href) => {
+        try {
+          const u = new URL(href, location.href);
+          return u.origin === location.origin && PAGES.includes(fileOf(u)) ? u : null;
+        } catch { return null; }
+      };
+      const rel = (u) => fileOf(u) + u.search + u.hash;
       let active = false;
-      let currentView = 'music';
 
-      function showView(path, push = true) {
-        const target = new URL(path, location.href);
-        if (target.origin !== location.origin) return;
-        const file = target.pathname.split('/').pop();
-        if (file === 'music.html' || file === '' && target.pathname.endsWith('/')) {
-          closeView(push);
-          return;
-        }
-        if (!['index.html', 'games.html'].includes(file)) return;
+      // History: opening / closing the shell adds one entry; pages navigating inside it add their
+      // own entries (the browser does that), and the address bar just follows along.
+      const go = (href) => { try { frame.contentWindow.location.replace(href); } catch { frame.src = href; } };
+      function showView(u, push = true) {
         active = true;
-        currentView = file === 'index.html' ? 'home' : 'games';
         document.body.classList.add('games-overlay');
         shell.hidden = false;
-        frame.src = target.href;
-        if (push) history.pushState({ zzMusicShell: true, view: currentView }, '', location.pathname + location.search + '#view=' + currentView);
+        const url = 'music.html?view=' + encodeURIComponent(rel(u));
+        if (push) history.pushState({ zzView: rel(u) }, '', url); else history.replaceState({ zzView: rel(u) }, '', url);
+        if (frame.getAttribute('data-src') !== rel(u)) { frame.setAttribute('data-src', rel(u)); go(u.href); }
       }
-
       function closeView(push = true) {
         if (!active) return;
         active = false;
-        currentView = 'music';
         document.body.classList.remove('games-overlay');
         shell.hidden = true;
-        frame.src = 'about:blank';
-        if (push && location.hash.startsWith('#view=')) history.replaceState({}, '', location.pathname + location.search);
+        frame.removeAttribute('data-src');
+        go('about:blank');
+        if (push) history.pushState({}, '', 'music.html' + location.hash); else history.replaceState({}, '', 'music.html' + location.hash);
       }
 
-      document.addEventListener('click', (event) => {
-        const link = event.target.closest('a[href]');
-        if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || link.target === '_blank') return;
-        const url = new URL(link.href, location.href);
-        if (url.origin !== location.origin) return;
-        const file = url.pathname.split('/').pop();
-        if (file === 'games.html' || file === 'index.html') {
-          event.preventDefault();
-          showView(url.href);
-        } else if (file === 'music.html' && active) {
-          event.preventDefault();
-          closeView();
-        }
+      // Links on the Music page: open site pages in the shell only while music is loaded
+      document.addEventListener('click', (e) => {
+        const a = e.target.closest('a[href]');
+        if (!a || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || a.target === '_blank') return;
+        const u = sitePage(a.href);
+        if (u && music()?.active()) { e.preventDefault(); showView(u); }
       }, true);
 
+      // Inside the shell: pages navigate on their own; "Music" brings you back here
       frame.addEventListener('load', () => {
-        try {
-          frame.contentDocument.addEventListener('click', (event) => {
-            const link = event.target.closest('a[href]');
-            if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || link.target === '_blank') return;
-            const url = new URL(link.href, location.href);
-            if (url.origin !== location.origin) return;
-            const file = url.pathname.split('/').pop();
-            if (file === 'music.html') {
-              event.preventDefault();
-              closeView();
-            } else if (file === 'games.html' || file === 'index.html') {
-              event.preventDefault();
-              showView(url.href);
-            }
-          }, true);
-        } catch (_) {}
+        let doc, loc;
+        try { doc = frame.contentDocument; loc = frame.contentWindow.location; } catch { return; }
+        if (!doc || loc.href === 'about:blank') return;
+        const u = new URL(loc.href);
+        if (fileOf(u) === 'music.html') { closeView(); return; }
+        if (active && frame.getAttribute('data-src') !== rel(u)) {
+          frame.setAttribute('data-src', rel(u));
+          history.replaceState({ zzView: rel(u) }, '', 'music.html?view=' + encodeURIComponent(rel(u)));
+        }
+        doc.addEventListener('click', (e) => {
+          const a = e.target.closest('a[href]');
+          if (!a || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+          let t; try { t = new URL(a.href, loc.href); } catch { return; }
+          if (t.origin === location.origin && fileOf(t) === 'music.html') {
+            e.preventDefault();
+            if (t.hash && t.hash !== location.hash) history.replaceState(history.state, '', location.pathname + location.search + t.hash);
+            closeView();
+            dispatchEvent(new HashChangeEvent('hashchange'));
+          }
+        }, true);
       });
 
-      window.addEventListener('popstate', () => closeView(false));
+      // Back / forward
+      addEventListener('popstate', (e) => {
+        const v = e.state && e.state.zzView;
+        const u = v && sitePage(v);
+        if (u) showView(u, false); else closeView(false);
+      });
+
+      // Player closed while a page is open: leave the shell and go to that page for real
+      addEventListener('zzmusic:closed', () => {
+        if (!active) return;
+        let href = frame.src;
+        try { href = frame.contentWindow.location.href; } catch { /* use src */ }
+        location.href = href;
+      });
+
+      // Opened as music.html?view=page (a song was started from another page, or a reload)
+      const v0 = new URLSearchParams(location.search).get('view');
+      const u0 = v0 && sitePage(v0);
+      if (u0) {
+        if (music()?.active()) showView(u0, false);
+        else location.replace(u0.href);   // nothing playing any more (e.g. after a reload): just go to the page
+      }
     })();
   </script>
-  <script src="zz-fx.js?v=202611176"></script>
+  <script src="zz-fx.js?v=202611181"></script>
 </body>
 </html>
