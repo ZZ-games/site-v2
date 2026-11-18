@@ -34,9 +34,10 @@ const SITE = {
   },
 };
 
-// Where the Classroom 6X game pages live. When ZZ-games/classroom6x has GitHub Pages on,
-// change this one line to "https://zz-games.github.io/classroom6x/game/" to use your own copy.
-const C6X = "https://unblockedgames-usa.github.io/classroom6x/game/";
+// Direct game player (just the game: no site frame, sidebar or thumbnails).
+// If a game doesn't load here, its wrapper page is
+// "https://unblockedgames-usa.github.io/classroom6x/game/" + slug + "/".
+const C6X = "https://minigamesville.com/play/";
 
 const GAMES = [
   { title: "Tung Tung Kart", category: "Racing", user: "ZZ-Interactives", repo: "Tung-Tung-Kart", url: "https://tung-tung-kart.netlify.app/", image: "covers/tung-tung-kart.jpg", hot: true },
@@ -138,7 +139,7 @@ const GAMES = [
   // { title: "World's Hardest Game", category: "Puzzle", repo: "", url: "", image: "covers/world-s-hardest-game.jpg" },
 
   // ---- More games from Classroom 6X (links only; nothing copied into ZZ repos) ----
-  // Pages for ZZ-games/classroom6x isn't on yet, so these use the original host (see C6X at the top).
+  // These use C6X at the top (the direct player).
   { title: "2 Player City Racing", category: "Racing", url: C6X + "2-player-city-racing/" },
   { title: "2 Player City Racing 2", category: "Racing", url: C6X + "2-player-city-racing-2/" },
   { title: "4x4 Drive Offroad", category: "Racing", url: C6X + "4x4-drive-offroad/" },
