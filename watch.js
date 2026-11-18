@@ -1,4 +1,4 @@
-// Watch page — CineSrc player with overlay, resume, failover
+// Watch page — player (VidLink / CineSrc) with overlay, resume, failover
 (function () {
   "use strict";
 
@@ -299,35 +299,56 @@
   }
 
   // ---- Overlay ----
-  function openOverlay(kind, id, opts) {
-    var sources = getSources(kind);
+  var heardFrom = false, nudgeTimer = 0;
+  function loadSource(i) {
+    var sources = getSources(mediaType);
     if (!sources.length) return;
-
-    overlayOpen = true;
-    failoverCount = 0;
-    currentSourceIndex = 0;
-
+    currentSourceIndex = ((i % sources.length) + sources.length) % sources.length;
     var src = sources[currentSourceIndex];
     currentSourceOrigin = new URL(src.base_url).origin;
-
-    var url = buildEmbedUrl(src.base_url, kind, id, opts);
-    frame.src = url;
+    heardFrom = false;
+    frame.src = buildEmbedUrl(src, mediaType, tmdbId, { season: currentSeason, episode: currentEpisode });
     overlayLoading.classList.remove("done");
     overlayError.hidden = true;
+    var btn = $("overlayServer");
+    btn.hidden = sources.length < 2;
+    btn.classList.remove("nudge");
+    $("overlayServerName").textContent = src.provider_name;
+    // nothing heard from the server after a while: point at the Server button
+    clearTimeout(nudgeTimer);
+    nudgeTimer = setTimeout(function () { if (overlayOpen && !heardFrom) btn.classList.add("nudge"); }, 12000);
+  }
+  frame.addEventListener("load", function () { if (overlayOpen && frame.src) overlayLoading.classList.add("done"); });
+
+  function openOverlay(kind, id, opts) {
+    if (!getSources(kind).length) return;
+    overlayOpen = true;
+    failoverCount = 0;
+    if (opts) { if (opts.season) currentSeason = opts.season; if (opts.episode) currentEpisode = opts.episode; }
+    loadSource(0);
     overlay.hidden = false;
     document.body.style.overflow = "hidden";
     $("overlayClose").focus();
     rememberPick();
     musicShell(function (m) { m.pauseForVideo(); });
   }
+  $("overlayServer").addEventListener("click", function () { loadSource(currentSourceIndex + 1); });
 
   // When the site is playing music (the Music player wraps the page), a movie or show pauses it
   function musicShell(fn) {
     try { if (window.parent !== window && window.parent.ZZMusic) fn(window.parent.ZZMusic); } catch (e) {}
   }
 
-  function buildEmbedUrl(baseUrl, kind, id, opts) {
-    var url;
+  function buildEmbedUrl(src, kind, id, opts) {
+    var baseUrl = src.base_url, url;
+    var progress = getProgress(mediaType, tmdbId, opts.season, opts.episode);
+    var resume = progress && progress.position_seconds > 10 ? Math.floor(progress.position_seconds) : 0;
+    if (src.style === "vidlink") {
+      url = baseUrl + (kind === "movie" ? "/movie/" + id : "/tv/" + id + "/" + (opts.season || 1) + "/" + (opts.episode || 1));
+      url += "?primaryColor=3b82f6&title=true&autoplay=true&nextbutton=true";
+      if (resume) url += "&startAt=" + resume;
+      return url;
+    }
     if (kind === "movie") {
       url = baseUrl + "/embed/movie/" + id;
     } else {
@@ -337,11 +358,7 @@
     var sep = url.indexOf("?") > -1 ? "&" : "?";
     url += sep + "back=close";
 
-    // Resume
-    var progress = getProgress(mediaType, tmdbId, opts.season, opts.episode);
-    if (progress && progress.position_seconds > 10) {
-      url += "&t=" + progress.position_seconds;
-    }
+    if (resume) url += "&t=" + resume;
 
     return url;
   }
@@ -368,47 +385,35 @@
   // ---- Failover ----
   function failover() {
     failoverCount++;
-    if (failoverCount > MAX_FAILOVER) {
+    if (failoverCount >= getSources(mediaType).length) {
       overlayLoading.classList.add("done");
       overlayError.hidden = false;
       return;
     }
-    var sources = getSources(mediaType);
-    currentSourceIndex = (currentSourceIndex + 1) % sources.length;
-    if (currentSourceIndex === 0 && failoverCount > 1) {
-      overlayLoading.classList.add("done");
-      overlayError.hidden = false;
-      return;
-    }
-    var src = sources[currentSourceIndex];
-    currentSourceOrigin = new URL(src.base_url).origin;
-    console.warn("[ZZ Watch] Failover to:", src.provider_name);
-    frame.src = buildEmbedUrl(src.base_url, mediaType, tmdbId, { season: currentSeason, episode: currentEpisode });
-    overlayLoading.classList.remove("done");
-    overlayError.hidden = true;
+    loadSource(currentSourceIndex + 1);
   }
 
   // Retry button
-  $("overlayRetry").addEventListener("click", function () {
-    failoverCount = 0;
-    currentSourceIndex = 0;
-    var sources = getSources(mediaType);
-    if (!sources.length) return;
-    var src = sources[0];
-    currentSourceOrigin = new URL(src.base_url).origin;
-    frame.src = buildEmbedUrl(src.base_url, mediaType, tmdbId, { season: currentSeason, episode: currentEpisode });
-    overlayLoading.classList.remove("done");
-    overlayError.hidden = true;
-  });
+  $("overlayRetry").addEventListener("click", function () { failoverCount = 0; loadSource(0); });
 
   // ---- postMessage handler ----
   window.addEventListener("message", function (e) {
     if (!overlayOpen) return;
     if (e.origin !== currentSourceOrigin) return;
     var d = e.data;
-    if (!d || typeof d.type !== "string" || d.type.indexOf("cinesrc:") !== 0) return;
-
-    var evt = d.type.replace("cinesrc:", "");
+    if (typeof d === "string") { try { d = JSON.parse(d); } catch (x) { return; } }
+    if (!d || typeof d.type !== "string") return;
+    var evt;
+    if (d.type === "PLAYER_EVENT" && d.data) {          // VidLink
+      evt = d.data.event;
+      d = { currentTime: d.data.currentTime, duration: d.data.duration };
+    } else if (d.type === "MEDIA_DATA") {
+      heardFrom = true; $("overlayServer").classList.remove("nudge"); return;
+    } else if (d.type.indexOf("cinesrc:") === 0) {
+      evt = d.type.replace("cinesrc:", "");
+    } else return;
+    heardFrom = true;
+    $("overlayServer").classList.remove("nudge");
 
     switch (evt) {
       case "ready":

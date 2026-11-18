@@ -1,7 +1,9 @@
-// CineSrc sources + watch progress (localStorage)
+// Video sources (servers) + watch progress (localStorage)
+// If one server is down, the player's "Server" button switches to the next.
 
 const SOURCES = [
-  { id: 1, provider_name: "CineSrc", base_url: "https://cinesrc.st", kind: "both", priority: 1, enabled: true },
+  { id: 1, provider_name: "VidLink", style: "vidlink", base_url: "https://vidlink.pro", kind: "both", priority: 1, enabled: true },
+  { id: 2, provider_name: "CineSrc", style: "cinesrc", base_url: "https://cinesrc.st", kind: "both", priority: 2, enabled: true },
 ];
 
 function getSources(kind) {
