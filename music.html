@@ -13,7 +13,7 @@
   <meta name="description" content="Free music on ZZ Games: charts, search, mood mixes and playlists.">
   <meta name="theme-color" content="#020414">
   <link rel="stylesheet" href="fonts/fonts.css">
-  <link rel="stylesheet" href="music/music.css?v=202611175">
+  <link rel="stylesheet" href="music/music.css?v=202611185">
   <link rel="stylesheet" href="zz-fx.css?v=202611176">
   <link rel="expect" href="#fxReady" blocking="render">
 </head>
@@ -36,7 +36,7 @@
     <section class="m-hero" id="mhero">
       <p class="m-eyebrow" id="mGreet">Music</p>
       <h1 class="m-title m-banner-title"><img src="banner-music.png" alt="Music"></h1>
-      <p class="m-tag">Put something on while you play. Charts, mixes and playlists.</p>
+      <p class="m-tag">Put something on while you play. Full songs, live radio and lofi.</p>
       <form class="m-search" id="mfind" role="search">
         <label class="sr-only" for="mq">Search music</label>
         <i data-ic="search"></i>
@@ -56,19 +56,14 @@
     </section>
   </div>
 
-  <div class="m-note" id="previewNote" hidden>
-    <i data-ic="wave"></i>
-    <span><b>Only full-length Audius or openly licensed Internet Archive recordings play. Short catalogue previews are disabled.</span>
-    <button class="ib sm" id="noteX" aria-label="Dismiss"><i data-ic="close"></i></button>
-  </div>
-
   <main class="m-main" id="main"><div class="view" id="view"></div></main>
 
   <div id="gameShell" hidden><iframe id="gameFrame" title="ZZ Games" allow="autoplay; fullscreen; gamepad; clipboard-write" allowfullscreen></iframe></div>
 
   <aside class="np" id="np" aria-label="Now playing">
     <div class="np-head"><span class="eyebrow">Now playing</span><button class="ib" id="npClose" aria-label="Close"><i data-ic="close"></i></button></div>
-    <div class="np-art"><img id="npArt" alt=""></div>
+    <div class="np-vid" id="npVid" hidden></div>
+    <div class="np-art" id="npArtBox"><img id="npArt" alt=""></div>
     <div class="np-meta"><h2 id="npTitle">Nothing yet</h2><p id="npSub">Pick something to play</p></div>
     <div class="np-actions">
       <button class="ib" id="npLike" aria-label="Like"><i data-ic="heart"></i></button>
@@ -129,7 +124,7 @@
     body.games-overlay > .m-note,
     body.games-overlay > .m-main { visibility:hidden; pointer-events:none; }
   </style>
-  <script src="music/music.js?v=202611175"></script>
+  <script src="music/music.js?v=202611186"></script>
   <script>
     (() => {
       const shell = document.getElementById('gameShell');

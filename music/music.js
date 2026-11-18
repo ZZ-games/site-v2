@@ -69,12 +69,12 @@
   };
   const S = {
     liked: store.get('liked', []), lists: store.get('lists', []), follows: store.get('follows', []),
-    stations: store.get('stations', []), tuned: store.get('tuned', []), activity: store.get('activity', []),
+    tuned: store.get('tuned', []), activity: store.get('activity', []),
     searches: store.get('searches', []), taste: store.get('taste', {}),
     cfg: Object.assign({ theme: matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light', autoplay: true, vol: 0.8, muted: false, panel: true }, store.get('cfg', {})),
   };
   const save = (...ks) => ks.forEach((k) => store.set(k, S[k]));
-  const slim = (t) => ({ id: t.id, src: t.src, t: t.t, a: t.a, aid: t.aid || '', al: t.al || '', alid: t.alid || '', art: t.art || '', big: t.big || '', d: t.d || 0, ex: !!t.ex, ver: !!t.ver, g: t.g || '', file: t.file || '', license: t.license || '', licenseUrl: t.licenseUrl || '', archiveUrl: t.archiveUrl || '' });
+  const slim = (t) => ({ id: t.id, src: t.src, t: t.t, a: t.a, aid: t.aid || '', al: t.al || '', alid: t.alid || '', art: t.art || '', big: t.big || '', d: t.d || 0, ex: !!t.ex, ver: !!t.ver, g: t.g || '', file: t.file || '', license: t.license || '', licenseUrl: t.licenseUrl || '', archiveUrl: t.archiveUrl || '', pre: t.pre || '' });
 
   function remember(item) {
     S.activity = [item, ...S.activity.filter((a) => !(a.k === item.k && a.id === item.id))].slice(0, 30);
@@ -115,10 +115,7 @@
   // the catalog then comes from Deezer directly in the browser, and songs play as Deezer's 30-second previews.
   const FILE = location.protocol === 'file:';
   let NOAPI = FILE;
-  function markNoapi() {
-    NOAPI = true;
-    if (!store.get('noteX', false)) $('#previewNote').hidden = false;
-  }
+  function markNoapi() { NOAPI = true; }
   const M = (p, fresh) => cached('m:' + p + (fresh ? Math.random() : ''), async () => {
     if (!NOAPI) {
       try {
@@ -146,7 +143,7 @@
   }
   const dzTrack = (x, alb) => {
     const al = alb || x.album || {};
-    return { id: 'dz' + x.id, src: 'dz', t: x.title, a: x.artist?.name || '', aid: x.artist?.id ? 'dz' + x.artist.id : '', al: al.title || '', alid: al.id ? 'dz' + al.id : '', art: al.cover_medium || '', big: al.cover_xl || al.cover_big || '', d: x.duration || 0, ex: !!x.explicit_lyrics };
+    return { id: 'dz' + x.id, src: 'dz', t: x.title, a: x.artist?.name || '', aid: x.artist?.id ? 'dz' + x.artist.id : '', al: al.title || '', alid: al.id ? 'dz' + al.id : '', art: al.cover_medium || '', big: al.cover_xl || al.cover_big || '', d: x.duration || 0, ex: !!x.explicit_lyrics, pre: x.preview || '' };
   };
   const dzArtist = (a) => ({ id: 'dz' + a.id, name: a.name, pic: a.picture_medium || '', big: a.picture_xl || a.picture_big || '', fans: a.nb_fan || 0 });
   const dzAlbum = (a, who) => ({ id: 'dz' + a.id, t: a.title, a: a.artist?.name || who || '', art: a.cover_medium || '', big: a.cover_xl || '', year: (a.release_date || '').slice(0, 4), type: a.record_type || 'album' });
@@ -326,8 +323,13 @@
   /* ================= player engine ================= */
   const audio = new Audio();
   audio.preload = 'auto';
-  const P = { q: [], i: -1, orig: null, shuffle: store.get('shuf', false), repeat: store.get('rep', 0), mode: null, cur: null, eng: 'audio', tok: 0, station: null, stream: null, label: '', playing: false };
-  function stopEngines() { audio.pause(); audio.removeAttribute('src'); audio.load(); }
+  const P = { q: [], i: -1, orig: null, shuffle: store.get('shuf', false), repeat: store.get('rep', 0), mode: null, cur: null, eng: 'audio', tok: 0, label: '', playing: false };
+  function stopEngines() {
+    audio.pause(); audio.removeAttribute('src'); audio.load();
+    try { ytNP?.stopVideo?.(); } catch { /* ignore */ }
+    if ($('#npArtBox')) $('#npArtBox').hidden = false;
+    if ($('#npVid')) $('#npVid').hidden = true;
+  }
   audio.addEventListener('playing', () => { if (P.eng === 'audio') { setPlaying(true); setBuffering(false); } });
   audio.addEventListener('pause', () => { if (P.eng === 'audio') setPlaying(false); });
   audio.addEventListener('waiting', () => { if (P.eng === 'audio') setBuffering(true); });
@@ -352,13 +354,98 @@
     P.eng = 'audio'; audio.src = url;
     try { await audio.play(); } catch { if (tok === P.tok) { setBuffering(false); setPlaying(false); } }
   }
+
+  /* --- YouTube engine: catalogue songs play from their official uploads (like aa-games-hub) --- */
+  const YTHOSTS = ['https://pipedapi.private.coffee', 'https://pipedapi.ducks.party', 'https://pipedapi.kavin.rocks', 'https://pipedapi.adminforge.de'];
+  const ytc = store.get('ytv', {}); // track id → [videoId, savedAt], a persistent lookup cache
+  const ytcFail = {};               // track id → time of last failed lookup (memory only)
+  const saveYt = () => { const ks = Object.keys(ytc); if (ks.length > 600) for (const k of ks.slice(0, ks.length - 600)) delete ytc[k]; store.set('ytv', ytc); };
+  let ytToastShown = false;
+  async function ytResolve(t) {
+    const hit = ytc[t.id];
+    if (hit && Date.now() - hit[1] < 30 * 864e5) return hit[0];
+    if (ytcFail[t.id] && Date.now() - ytcFail[t.id] < 10 * 60e3) return null;
+    const q = enc([t.a, t.t].filter(Boolean).join(' ') + ' official audio');
+    for (const host of YTHOSTS) {
+      try {
+        const r = await fetch(host + '/search?q=' + q + '&filter=music_songs', { signal: AbortSignal.timeout(9000) });
+        if (!r.ok) continue;
+        const j = await r.json();
+        const items = (j.items || []).filter((x) => x.url && x.type === 'stream');
+        if (!items.length) continue;
+        const want = normAudio(t.t), wantA = normAudio(t.a), wd = t.d || 0;
+        let best = null, bs = -1;
+        for (const x of items.slice(0, 8)) {
+          const xt = normAudio(x.title || ''), xd = Math.round(x.duration || 0), who = x.uploader || x.uploaderName || '';
+          const s = (xt === want ? 6 : xt.includes(want) || want.includes(xt) ? 3 : 0)
+            + (wantA && who.toLowerCase().includes(wantA) ? 3 : /\b(topic|vevo|official|records)\b/i.test(who) ? 2 : 0)
+            + (wd && xd ? Math.max(0, 2 - Math.abs(xd - wd) / 10) : 0);
+          if (s > bs) { bs = s; best = x; }
+        }
+        if (best && bs >= 3) {
+          const v = String(best.url).split('v=')[1] || '';
+          if (v) { ytc[t.id] = [v, Date.now()]; saveYt(); return v; }
+        }
+      } catch { /* next host */ }
+    }
+    ytcFail[t.id] = Date.now();
+    return null;
+  }
+  let ytApi = null, ytNP = null, ytN = 0;
+  const ytCur = () => ytNP;
+  function loadYT() {
+    if (ytApi) return ytApi;
+    ytApi = new Promise((res, rej) => {
+      if (window.YT?.Player) return res();
+      window.onYouTubeIframeAPIReady = () => res();
+      const s = document.createElement('script');
+      s.src = 'https://www.youtube.com/iframe_api';
+      s.onerror = () => { ytApi = null; rej(new Error('YouTube blocked')); };
+      document.head.append(s);
+      setTimeout(() => { if (!window.YT?.Player) { ytApi = null; rej(new Error('YouTube took too long')); } }, 15000);
+    });
+    return ytApi;
+  }
+  async function playYT(v, tok) {
+    if (tok !== P.tok) return;
+    P.eng = 'yt';
+    try { await loadYT(); } catch { if (tok === P.tok) failSkip('YouTube didn’t load — trying something else', tok); return; }
+    if (tok !== P.tok) return;
+    if (!ytToastShown) { toast('Full songs play from their official YouTube uploads'); ytToastShown = true; }
+    const host = $('#npVid');
+    host.innerHTML = '<div id="ytp' + (++ytN) + '"></div>';
+    const player = new YT.Player('ytp' + ytN, {
+      host: 'https://www.youtube-nocookie.com', videoId: v, width: '100%', height: '100%',
+      playerVars: { autoplay: 1, controls: 0, rel: 0, playsinline: 1, iv_load_policy: 3, modestbranding: 1, disablekb: 1, fs: 1 },
+      events: {
+        onReady: (e) => { try { e.target.setVolume(Math.round((S.cfg.muted ? 0 : S.cfg.vol) * 100)); if (P.eng === 'yt') e.target.playVideo(); } catch { /* ignore */ } },
+        onStateChange: (e) => {
+          if (P.eng !== 'yt') return;
+          if (e.data === 1) { setBuffering(false); setPlaying(true); }
+          else if (e.data === 2) setPlaying(false);
+          else if (e.data === 0) { if (P.mode === 'song') onEnded(); else setPlaying(false); }
+          else if (e.data === 3) setBuffering(true);
+        },
+        onError: () => { if (P.eng === 'yt') { stopEngines(); failSkip('YouTube couldn’t play that one — moving on', P.tok); } },
+      },
+    });
+    ytNP = player;
+    if ($('#npArtBox')) $('#npArtBox').hidden = true;
+    if ($('#npVid')) $('#npVid').hidden = false;
+    setBuffering(true); setPlaying(true);
+  }
   async function playTrack(t) {
     const tok = ++P.tok;
-    P.cur = t; P.mode = 'song'; P.station = null; P.stream = null;
+    P.cur = t; P.mode = 'song';
     stopEngines();
     setNow({ title: t.t, sub: t.src === 'ia' ? t.a + ' · Internet Archive · ' + t.license : t.a, subHref: t.src === 'ia' ? t.archiveUrl : (t.aid ? '#/artist/' + t.aid : ''), art: t.big || t.art, small: t.art, seed: t.t });
     setBuffering(true); markCurrent(); renderQueue(); bumpTaste(t);
     remember({ k: 'song', id: t.id, t: t.t, s: t.a, img: t.art, ref: slim(t) });
+    if (t.src === 'dz') {
+      const v = await ytResolve(t);
+      if (tok !== P.tok) return;
+      if (v) { await playYT(v, tok); return; }
+    }
     if (t.src === 'au') { await playAudioSource(AU + '/tracks/' + t.id.slice(2) + '/stream?' + APP, tok); return; }
     if (t.src === 'ia') { await playAudioSource(IA + '/download/' + enc(t.id.slice(2)) + '/' + t.file, tok); return; }
     try {
@@ -370,9 +457,10 @@
       const archiveMatch = await findArchiveVersion(t);
       if (tok !== P.tok) return;
       if (archiveMatch) { setNow({ title: t.t, sub: t.a + ' · Internet Archive · ' + archiveMatch.license, subHref: archiveMatch.archiveUrl, art: t.big || t.art, small: t.art, seed: t.t }); toast('Playing openly licensed audio from Internet Archive · ' + archiveMatch.license); await playAudioSource(IA + '/download/' + enc(archiveMatch.id.slice(2)) + '/' + archiveMatch.file, tok); return; }
-    } catch { /* fall back to Deezer preview */ }
+    } catch { /* fall back to the short preview */ }
     if (tok !== P.tok) return;
-    if (tok === P.tok) failSkip('No full-length Audius or licensed Internet Archive version found for “' + t.t + '” — short previews are disabled', tok);
+    if (t.pre) { toast('Only a short preview was available for this one'); await playAudioSource(t.pre, tok); return; }
+    if (tok === P.tok) failSkip('Couldn’t find a playable version of “' + t.t + '”', tok);
   }
 
   function playList(list, start = 0, { shuffle = false, label = '' } = {}) {
@@ -452,16 +540,42 @@
   }
 
 
-  function toggle() { if (!P.mode) return; if (audio.paused) audio.play().catch(() => {}); else audio.pause(); }
-  function pause() { audio.pause(); }
-  const position = () => audio.currentTime || 0;
-  const duration = () => { if (P.mode !== 'song') return 0; const d = audio.duration; return isFinite(d) && d > 0 ? d : P.cur?.d || 0; };
-  function seek(s) { if (P.mode === 'song' && isFinite(audio.duration)) audio.currentTime = s; }
-  function applyVol() { audio.volume = S.cfg.muted ? 0 : S.cfg.vol; $('#vol').value = Math.round(S.cfg.vol * 100); $('#muteBtn').innerHTML = ic(S.cfg.muted || S.cfg.vol === 0 ? 'mute' : 'vol'); }
+  function toggle() {
+    if (!P.mode) return;
+    if (P.eng === 'yt') {
+      try {
+        const p = ytCur();
+        const st = typeof p.getPlayerState === 'function' ? p.getPlayerState() : -1;
+        if (st === 1) { p.pauseVideo(); return; }
+        if (st === 2 || st === 3 || st === 5) { p.playVideo(); return; }
+      } catch { /* dead player: rebuild below */ }
+      if (P.cur) playTrack(P.cur); // ended (0) or unresponsive: start the song over
+      return;
+    }
+    if (audio.paused) audio.play().catch(() => {}); else audio.pause();
+  }
+  function pause() { try { if (P.eng === 'yt') ytCur()?.pauseVideo?.(); else audio.pause(); } catch { /* ignore */ } }
+  const position = () => (P.eng === 'yt' ? (ytCur()?.getCurrentTime?.() || 0) : (audio.currentTime || 0));
+  const duration = () => {
+    if (P.mode !== 'song') return 0;
+    if (P.eng === 'yt') { const d = ytCur()?.getDuration?.() || 0; return isFinite(d) && d > 0 ? d : P.cur?.d || 0; }
+    const d = audio.duration; return isFinite(d) && d > 0 ? d : P.cur?.d || 0;
+  };
+  function seek(s) {
+    if (P.mode !== 'song') return;
+    if (P.eng === 'yt') { try { ytCur()?.seekTo?.(s, true); } catch { /* ignore */ } return; }
+    if (isFinite(audio.duration)) audio.currentTime = s;
+  }
+  function applyVol() {
+    audio.volume = S.cfg.muted ? 0 : S.cfg.vol;
+    const v = Math.round((S.cfg.muted ? 0 : S.cfg.vol) * 100);
+    try { ytNP?.setVolume?.(v); } catch { /* ignore */ }
+    $('#vol').value = Math.round(S.cfg.vol * 100); $('#muteBtn').innerHTML = ic(S.cfg.muted || S.cfg.vol === 0 ? 'mute' : 'vol');
+  }
 
   function closePlayer() {
     ++P.tok; stopEngines();
-    P.mode = null; P.cur = null; P.q = []; P.i = -1; P.station = null; P.stream = null;
+    P.mode = null; P.cur = null; P.q = []; P.i = -1;
     setPlaying(false); setBuffering(false);
     $('#bar').hidden = true; document.body.classList.remove('playing-bar');
     drawer(false);
@@ -519,7 +633,7 @@
       document.body.classList.remove('playing-bar');
     }
     document.body.classList.toggle('paused', !on);
-    $('[data-act=toggle]').forEach((b) => (b.innerHTML = ic(on ? 'pause' : 'play')));
+    $$('[data-act=toggle]').forEach((b) => (b.innerHTML = ic(on ? 'pause' : 'play')));
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = on ? 'playing' : 'paused';
   }
   const setBuffering = (on) => document.body.classList.toggle('buffering', on);
@@ -542,16 +656,11 @@
   function markCurrent() {
     $$('.row.on').forEach((r) => r.classList.remove('on'));
     if (P.mode === 'song' && P.cur) $$(`.row[data-tid="${CSS.escape(P.cur.id)}"]`).forEach((r) => r.classList.add('on'));
-    $$('.st.on,.stream.on').forEach((r) => r.classList.remove('on'));
-    if (P.station) $$(`.st[data-sid="${CSS.escape(P.station.id)}"]`).forEach((r) => r.classList.add('on'));
-    if (P.stream) $$(`.stream[data-v="${CSS.escape(P.stream[0])}"]`).forEach((r) => r.classList.add('on'));
   }
   function renderQueue() {
     for (const k of LISTS.keys()) if (k.startsWith('Q')) LISTS.delete(k);
     const box = $('#npQueue');
     $('#qClear').hidden = !(P.mode === 'song' && P.q.length > P.i + 1);
-    if (P.mode === 'radio') { $('#qLabel').textContent = 'On air'; box.innerHTML = `<p class="note">Live stations don't have a queue. ${(P.station.tags || []).map(esc).join(' · ')}</p>`; return; }
-    if (P.mode === 'stream') { $('#qLabel').textContent = 'Live stream'; box.innerHTML = '<p class="note">This plays in the video window. You can keep browsing while it plays.</p>'; return; }
     if (P.mode !== 'song') { $('#qLabel').textContent = 'Up next'; box.innerHTML = ''; return; }
     const up = P.q.slice(P.i + 1);
     $('#qLabel').textContent = P.label ? `Up next · ${P.label}` : 'Up next';
@@ -700,7 +809,7 @@
     const tok = ++VT;
     for (const k of LISTS.keys()) if (!k.startsWith('Q')) LISTS.delete(k);
     closeMenu();
-    const r = ['radio', 'lofi'].includes(parts[0]) ? 'home' : (parts[0] || 'home');
+    const r = parts[0] || 'home';
     CUR_TAB = { home: 'home', library: 'library', list: 'library' }[r] || '';
     paintChans(CUR_TAB);
     document.body.classList.toggle('m-compact', r !== 'home');
@@ -746,7 +855,7 @@
   const fill = (id, html, tok) => { const el = document.getElementById(id); if (el && live(tok)) el.innerHTML = html; return el; };
 
   /* ================= views ================= */
-  function jumpHTML(n = 12) {
+  function jumpHTML(n = 8) {
     const items = S.activity.slice(0, n);
     if (!items.length) return '';
     return `<section class="sec">${secHead(1, 'Pick up where you left off', '', '<button class="link" data-clearjump>Clear</button>')}
@@ -861,7 +970,7 @@
   /* --- library --- */
   function viewLibrary(_, q) {
     const tab = q.get('tab') || 'playlists';
-    const T = [['playlists', 'Playlists'], ['liked', 'Liked songs'], ['artists', 'Artists'], ['stations', 'Stations'], ['history', 'History']];
+    const T = [['playlists', 'Playlists'], ['liked', 'Liked songs'], ['artists', 'Artists'], ['history', 'History']];
     let body = '';
     if (tab === 'playlists') {
       body = `<div class="grid">
@@ -872,8 +981,6 @@
       body = S.liked.length ? `<div class="page-acts" style="margin:0 0 14px"><button class="btn hot" data-cplay="list:liked">${ic('play')}Play</button><button class="btn ghost" data-shufflelist="liked">${ic('shuffle')}Shuffle</button></div>${rows(S.liked, { ctx: 'liked' })}` : emptyBox('No liked songs yet', 'Tap the heart on any song to keep it here.');
     } else if (tab === 'artists') {
       body = S.follows.length ? `<div class="grid">${S.follows.map(artistCard).join('')}</div>` : emptyBox('Not following anyone', 'Follow artists from their page to see them here.');
-    } else if (tab === 'stations') {
-      body = S.stations.length ? `<div class="stations">${S.stations.map(stationCard).join('')}</div>` : emptyBox('No saved stations', 'Star a station in Live radio to save it.');
     } else {
       const songs = S.activity.filter((a) => a.k === 'song' && a.ref).map((a) => a.ref);
       body = songs.length ? `<div class="page-acts" style="margin:0 0 14px"><button class="btn ghost" data-clearhist>${ic('trash')}Clear history</button></div>${rows(songs)}` : emptyBox('Nothing played yet');
@@ -1044,10 +1151,6 @@
     if (isCur(tr)) { toggle(); return; }
     playList(list, i, { label: rowEl.closest('.sec')?.querySelector('h2')?.textContent || '' });
   });
-  document.addEventListener('keydown', (e) => {
-    const st = e.target.closest?.('.st[data-sid]');
-    if (st && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); st.click(); }
-  });
 
   /* ================= player controls wiring ================= */
   document.addEventListener('click', (e) => {
@@ -1064,7 +1167,6 @@
   $('#panelBtn').onclick = () => drawer(!$('#np').classList.contains('open'));
   $('#npClose').onclick = $('#npScrim').onclick = () => drawer(false);
   $('#npSub').addEventListener('click', (e) => { if (e.target.closest('a')) drawer(false); });
-  $('#noteX').onclick = () => { $('#previewNote').hidden = true; store.set('noteX', true); };
   $('#npLike').onclick = $('#barLike').onclick = () => toggleLike(P.cur);
   $('#npAdd').onclick = (e) => { if (P.cur) addMenu(e.currentTarget, [P.cur]); };
   $('#npRadio').onclick = () => { if (P.cur) songRadio(P.cur); };
