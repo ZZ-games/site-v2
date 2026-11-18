@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Request a game · ZZ Games</title>
   <script>document.title = "ZZ Classroom";</script>
+  <script>try{if(sessionStorage.getItem("zz-seen"))document.documentElement.classList.add("fx-return");sessionStorage.setItem("zz-seen","1")}catch(e){}</script>
+  <script type="speculationrules">{"prerender":[{"where":{"selector_matches":".zz-links a, .m-links a, .zz-panel, .topbar .logo, .m-logo"},"eagerness":"moderate"}]}</script>
   <script src="zz-guard.js?v=202611170"></script>
   <link rel="icon" type="image/svg+xml" href="tab/classroom.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="tab/classroom-32.png">
@@ -12,8 +14,8 @@
   <link rel="icon" type="image/png" sizes="192x192" href="tab/classroom-192.png">
   <meta name="description" content="Request a new game, report a broken one, or suggest an idea for ZZ Games.">
   <link rel="stylesheet" href="fonts/fonts.css">
-  <link rel="stylesheet" href="style.css?v=202611181">
-  <link rel="stylesheet" href="zz-fx.css?v=202611181">
+  <link rel="stylesheet" href="style.css?v=202611182">
+  <link rel="stylesheet" href="zz-fx.css?v=202611182">
   <link rel="expect" href="#fxReady" blocking="render">
 </head>
 <body>
@@ -87,7 +89,7 @@
   <footer class="foot">ZZ Games</footer>
   <iframe name="zzSink" id="zzSink" style="display:none" title=""></iframe>
 
-  <script src="games.js?v=202611181"></script>
+  <script src="games.js?v=202611182"></script>
   <script>
   (() => {
     const $ = (id) => document.getElementById(id);
@@ -235,6 +237,6 @@
     renderMine();
   })();
   </script>
-  <script src="zz-fx.js?v=202611181"></script>
+  <script src="zz-fx.js?v=202611182"></script>
 </body>
 </html>

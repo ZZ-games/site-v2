@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Music · ZZ Games</title>
   <script>document.title = "ZZ Classroom";</script>
+  <script>try{if(sessionStorage.getItem("zz-seen"))document.documentElement.classList.add("fx-return");sessionStorage.setItem("zz-seen","1")}catch(e){}</script>
+  <script id="zzSpec" type="speculationrules">{"prerender":[{"where":{"selector_matches":".zz-links a, .m-links a, .zz-panel, .topbar .logo, .m-logo"},"eagerness":"moderate"}]}</script>
   <script src="zz-guard.js?v=202611170"></script>
   <link rel="icon" type="image/svg+xml" href="tab/classroom.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="tab/classroom-32.png">
@@ -13,8 +15,8 @@
   <meta name="description" content="Free music on ZZ Games: charts, search, mood mixes and playlists.">
   <meta name="theme-color" content="#020414">
   <link rel="stylesheet" href="fonts/fonts.css">
-  <link rel="stylesheet" href="music/music.css?v=202611185">
-  <link rel="stylesheet" href="zz-fx.css?v=202611181">
+  <link rel="stylesheet" href="music/music.css?v=202611182">
+  <link rel="stylesheet" href="zz-fx.css?v=202611182">
   <link rel="expect" href="#fxReady" blocking="render">
 </head>
 <body class="music">
@@ -36,7 +38,7 @@
     <section class="m-hero" id="mhero">
       <p class="m-eyebrow" id="mGreet">Music</p>
       <h1 class="m-title m-banner-title"><img src="banner-music.png?v=202611181" alt="Music"></h1>
-      <p class="m-tag">Put something on while you play. Full songs, live radio and lofi.</p>
+      <p class="m-tag">Put something on while you play. Full songs, playlists and the charts.</p>
       <form class="m-search" id="mfind" role="search">
         <label class="sr-only" for="mq">Search music</label>
         <i data-ic="search"></i>
@@ -123,7 +125,7 @@
     body.games-overlay { overflow: hidden; padding-top: 0 !important; }
     body.games-overlay > .m-top, body.games-overlay > .m-note, body.games-overlay > .m-main, body.games-overlay > .fx-bg { visibility: hidden; pointer-events: none; }
   </style>
-  <script src="music/music.js?v=202611181"></script>
+  <script src="music/music.js?v=202611182"></script>
   <script>
     (() => {
       const shell = document.getElementById('gameShell');
@@ -143,22 +145,37 @@
       // History: opening / closing the shell adds one entry; pages navigating inside it add their
       // own entries (the browser does that), and the address bar just follows along.
       const go = (href) => { try { frame.contentWindow.location.replace(href); } catch { frame.src = href; } };
+      // Switching between the Music page and another page cross-fades, like a normal tab switch.
+      // Opening a page waits (briefly) for it to load, so you never see an empty frame.
+      const calm = () => document.documentElement.classList.contains('reduce-motion') || matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const smooth = (fn) => {
+        if (!document.startViewTransition || calm()) { fn(); return null; }
+        const vt = document.startViewTransition(fn);
+        // a crossfade cut short (e.g. leaving the page mid-switch) is fine: don't report it as an error
+        [vt.ready, vt.finished, vt.updateCallbackDone].forEach((p) => p.catch(() => {}));
+        return vt;
+      };
+      const loaded = () => new Promise((res) => {
+        const t = setTimeout(res, 1200);
+        frame.addEventListener('load', () => { clearTimeout(t); setTimeout(res, 60); }, { once: true });
+      });
       function showView(u, push = true) {
-        active = true;
-        document.body.classList.add('games-overlay');
-        shell.hidden = false;
         const url = 'music.html?view=' + encodeURIComponent(rel(u));
         if (push) history.pushState({ zzView: rel(u) }, '', url); else history.replaceState({ zzView: rel(u) }, '', url);
-        if (frame.getAttribute('data-src') !== rel(u)) { frame.setAttribute('data-src', rel(u)); go(u.href); }
+        const change = frame.getAttribute('data-src') !== rel(u);
+        if (change) { frame.setAttribute('data-src', rel(u)); go(u.href); }
+        const reveal = () => { active = true; document.body.classList.add('games-overlay'); shell.hidden = false; };
+        if (active || !change) { reveal(); return; }
+        active = true;
+        smooth(() => loaded().then(reveal));
       }
       function closeView(push = true) {
         if (!active) return;
         active = false;
-        document.body.classList.remove('games-overlay');
-        shell.hidden = true;
-        frame.removeAttribute('data-src');
-        go('about:blank');
         if (push) history.pushState({}, '', 'music.html' + location.hash); else history.replaceState({}, '', 'music.html' + location.hash);
+        const vt = smooth(() => { document.body.classList.remove('games-overlay'); shell.hidden = true; });
+        const blank = () => { if (active) return; frame.removeAttribute('data-src'); go('about:blank'); };   // unless it was reopened meanwhile
+        if (vt && vt.finished) vt.finished.then(blank, blank); else blank();
       }
 
       // Links on the Music page: open site pages in the shell only while music is loaded
@@ -200,6 +217,9 @@
         if (u) showView(u, false); else closeView(false);
       });
 
+      // While a song is loaded, tab links open inside this page, so hover-preloading them is wasted work
+      addEventListener('zzmusic:track', () => { const sp = document.getElementById('zzSpec'); if (sp) sp.remove(); });
+
       // Player closed while a page is open: leave the shell and go to that page for real
       addEventListener('zzmusic:closed', () => {
         if (!active) return;
@@ -217,6 +237,6 @@
       }
     })();
   </script>
-  <script src="zz-fx.js?v=202611181"></script>
+  <script src="zz-fx.js?v=202611182"></script>
 </body>
 </html>
