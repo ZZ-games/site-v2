@@ -15,7 +15,7 @@
   <meta name="theme-color" content="#020414">
   <link rel="stylesheet" href="fonts/fonts.css">
   <link rel="stylesheet" href="music/music.css?v=202611185">
-  <link rel="stylesheet" href="zz-fx.css?v=202611187">
+  <link rel="stylesheet" href="zz-fx.css?v=202611191">
   <link rel="expect" href="#fxReady" blocking="render">
 </head>
 <body class="music">
@@ -118,12 +118,13 @@
   <style>
     /* Site shell: while a song is loaded, other pages open here so the music keeps playing */
     #gameShell { position: fixed; inset: 0; z-index: 41; background: #00030f; }
-    body.playing-bar #gameShell { bottom: var(--bar); }
+    /* on other pages the player lives in the nav's "now playing" dropdown, so the bottom bar steps aside */
+    body.games-overlay #bar { display: none !important; }
     #gameFrame { display: block; width: 100%; height: 100%; border: 0; background: #00030f; }
     body.games-overlay { overflow: hidden; padding-top: 0 !important; }
     body.games-overlay > .m-top, body.games-overlay > .m-note, body.games-overlay > .m-main, body.games-overlay > .fx-bg { visibility: hidden; pointer-events: none; }
   </style>
-  <script src="music/music.js?v=202611190"></script>
+  <script src="music/music.js?v=202611191"></script>
   <script>
     (() => {
       const shell = document.getElementById('gameShell');
@@ -235,6 +236,6 @@
       }
     })();
   </script>
-  <script src="zz-fx.js?v=202611188"></script>
+  <script src="zz-fx.js?v=202611191"></script>
 </body>
 </html>

@@ -1303,6 +1303,15 @@
     active: () => !!P.mode,
     playing: () => !!P.playing,
     play: (t, list) => { if (!t) return; const l = (list && list.length ? list : [t]); playList(l, Math.max(0, l.findIndex((x) => x.id === t.id))); },
+    // for the "now playing" dropdown in other pages' nav
+    state: () => ({
+      active: !!P.mode, playing: !!P.playing,
+      title: P.cur?.t || $('#barTitle').textContent || '', artist: P.cur?.a || $('#barSub').textContent || '',
+      art: P.cur?.art || P.cur?.big || $('#barArt').getAttribute('src') || '',
+      pos: position(), dur: duration(), vol: S.cfg.muted ? 0 : S.cfg.vol,
+    }),
+    toggle: () => toggle(), next: () => next(), prev: () => prev(), seek: (s) => seek(s),
+    setVolume: (v) => { S.cfg.vol = Math.max(0, Math.min(1, v)); S.cfg.muted = false; applyVol(); save('cfg'); },
     pauseForVideo: () => { if (P.mode && P.playing) { pause(); P.videoPaused = true; } },
     resumeAfterVideo: () => { if (P.videoPaused) { P.videoPaused = false; if (P.mode && !P.playing) toggle(); } },
   };
