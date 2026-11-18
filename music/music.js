@@ -304,6 +304,16 @@
       <button class="ib r-more" data-more aria-label="More options">${ic('more')}</button></li>`;
   }
   const trackAt = (el) => { const r = el.closest('[data-l]'); return r ? LISTS.get(r.dataset.l)?.[+r.dataset.i] : null; };
+  // start finding a song as soon as you point at it, so it's ready when you tap
+  let hoverT = 0, hoverEl = null;
+  const warm = (e) => {
+    const r = e.target && e.target.closest ? e.target.closest('[data-l]') : null;
+    if (!r || r === hoverEl) return;
+    hoverEl = r; clearTimeout(hoverT);
+    hoverT = setTimeout(() => { const t = trackAt(r); if (t) prepare(t); }, e.type === 'touchstart' ? 0 : 120);
+  };
+  document.addEventListener('pointerover', warm, { passive: true });
+  document.addEventListener('touchstart', warm, { passive: true });
 
   const secHead = (n, title, sub = '', acts = '') => `<div class="sec-h"><h2>${esc(title)}</h2>${sub ? `<p>${sub}</p>` : '<p></p>'}${acts ? `<div class="acts">${acts}</div>` : ''}</div>`;
   const skelRows = (n = 6) => Array.from({ length: n }, () => '<div class="sk sk-row"></div>').join('');
@@ -381,6 +391,27 @@
   const YTHOSTS = ['https://pipedapi.private.coffee', 'https://pipedapi.ducks.party', 'https://pipedapi.kavin.rocks', 'https://pipedapi.adminforge.de'];
   // v2: older lookups could match the wrong song, so they're dropped
   try { localStorage.removeItem('zzs:ytv'); } catch { /* ignore */ }
+  // Ask every lookup server at once and take the first good answer (one slow or dead server
+  // used to hold a song up for 9 seconds before the next was tried). The fastest is tried first next time.
+  let pipedBest = store.get('pipedBest', '');
+  function piped(path, good) {
+    const hosts = pipedBest && YTHOSTS.includes(pipedBest) ? [pipedBest, ...YTHOSTS.filter((h) => h !== pipedBest)] : YTHOSTS;
+    const ctl = new AbortController();
+    const kill = setTimeout(() => ctl.abort(), 8000);
+    const one = (host, i) => new Promise((res, rej) => {
+      // give the remembered fastest server a short head start, then ask the rest
+      setTimeout(() => {
+        fetch(host + path, { signal: ctl.signal })
+          .then((r) => (r.ok ? r.json() : Promise.reject(new Error(r.status))))
+          .then((j) => (good(j) ? res([j, host]) : rej(new Error('empty'))))
+          .catch(rej);
+      }, i === 0 || !pipedBest ? 0 : 350);
+    });
+    return Promise.any(hosts.map(one))
+      .then(([j, host]) => { if (host !== pipedBest) { pipedBest = host; store.set('pipedBest', host); } return j; })
+      .catch(() => null)
+      .finally(() => { clearTimeout(kill); ctl.abort(); });
+  }
   const ytc = store.get('ytv2', {}); // track id → [videoId, savedAt], a persistent lookup cache
   const ytcFail = {};                // track id → time of last failed lookup (memory only)
   const saveYt = () => { const ks = Object.keys(ytc); if (ks.length > 600) for (const k of ks.slice(0, ks.length - 600)) delete ytc[k]; store.set('ytv2', ytc); };
@@ -412,42 +443,48 @@
     }
     return best;
   }
-  async function ytResolve(t) {
+  const ytPending = new Map();   // lookups in progress, shared by "play" and "get ready"
+  function ytResolve(t) {
     const hit = ytc[t.id];
-    if (hit && Date.now() - hit[1] < 30 * 864e5) return hit[0];
-    if (ytcFail[t.id] && Date.now() - ytcFail[t.id] < 10 * 60e3) return null;
+    if (hit && Date.now() - hit[1] < 30 * 864e5) return Promise.resolve(hit[0]);
+    if (ytcFail[t.id] && Date.now() - ytcFail[t.id] < 10 * 60e3) return Promise.resolve(null);
+    if (ytPending.has(t.id)) return ytPending.get(t.id);
     const q = enc([t.a, songName(t.t) || t.t].filter(Boolean).join(' '));
-    for (const host of YTHOSTS) {
-      try {
-        const r = await fetch(host + '/search?q=' + q + '&filter=music_songs', { signal: AbortSignal.timeout(9000) });
-        if (!r.ok) continue;
-        const j = await r.json();
-        const items = (j.items || []).filter((x) => x.url && x.type === 'stream');
-        if (!items.length) continue;
-        const best = pickVideo(items, t);
+    const job = piped('/search?q=' + q + '&filter=music_songs', (j) => (j.items || []).some((x) => x.url && x.type === 'stream'))
+      .then((j) => {
+        const items = j ? (j.items || []).filter((x) => x.url && x.type === 'stream') : [];
+        const best = items.length ? pickVideo(items, t) : null;   // nothing that is really this song: don't guess
         const v = best ? (String(best.url).split('v=')[1] || '').split('&')[0] : '';
         if (v) { ytc[t.id] = [v, Date.now()]; saveYt(); return v; }
-        break;   // a working host found nothing that is really this song: don't guess
-      } catch { /* next host */ }
-    }
-    ytcFail[t.id] = Date.now();
-    return null;
+        ytcFail[t.id] = Date.now();
+        return null;
+      })
+      .finally(() => ytPending.delete(t.id));
+    ytPending.set(t.id, job);
+    return job;
   }
   // The song's audio as a plain stream, for the normal <audio> player (iPad/iPhone, or when the
   // YouTube player won't start). iOS plays AAC (audio/mp4), so that format is preferred.
-  async function ytAudio(v) {
-    for (const host of YTHOSTS) {
-      try {
-        const r = await fetch(host + '/streams/' + v, { signal: AbortSignal.timeout(9000) });
-        if (!r.ok) continue;
-        const j = await r.json();
-        const list = (j.audioStreams || []).filter((x) => x.url && !x.videoOnly);
-        const mp4 = list.filter((x) => /mp4|m4a/i.test((x.mimeType || '') + (x.format || ''))).sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0));
-        const pick = mp4[0] || (IOS ? null : list.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0]);
-        if (pick) return pick.url;
-      } catch { /* next host */ }
-    }
-    return null;
+  const streamCache = new Map();   // videoId → [url, time]; stream links stay good for a few hours
+  function ytAudio(v) {
+    const c = streamCache.get(v);
+    if (c && Date.now() - c[1] < 2 * 3600e3) return Promise.resolve(c[0]);
+    const pickFrom = (j) => {
+      const list = (j.audioStreams || []).filter((x) => x.url && !x.videoOnly);
+      const mp4 = list.filter((x) => /mp4|m4a/i.test((x.mimeType || '') + (x.format || ''))).sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0));
+      const pick = mp4[0] || (IOS ? null : list.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0]);
+      return pick ? pick.url : null;
+    };
+    return piped('/streams/' + v, (j) => !!pickFrom(j)).then((j) => {
+      const url = j ? pickFrom(j) : null;
+      if (url) streamCache.set(v, [url, Date.now()]);
+      return url;
+    });
+  }
+  // Get a song ready before it's played: find its video (and on iPad/iPhone its audio stream)
+  function prepare(t) {
+    if (!t || t.src !== 'dz') return;
+    ytResolve(t).then((v) => { if (v && IOS) ytAudio(v); }).catch(() => {});
   }
   // Play the full song as plain audio; if that fails, YouTube's player, then the other sources
   async function playFullAudio(v, tok, thenTry) {
@@ -519,6 +556,8 @@
     setNow({ title: t.t, sub: t.a, subHref: t.src === 'ia' ? t.archiveUrl : (t.aid ? '#/artist/' + t.aid : ''), art: t.big || t.art, small: t.art, seed: t.t });
     setBuffering(true); markCurrent(); renderQueue(); bumpTaste(t);
     remember({ k: 'song', id: t.id, t: t.t, s: t.a, img: t.art, ref: slim(t) });
+    // while this one starts, quietly find the next two so skipping is instant
+    setTimeout(() => { if (tok === P.tok) [P.q[P.i + 1], P.q[P.i + 2]].forEach(prepare); }, 1500);
     if (t.src === 'dz') {
       const v = await ytResolve(t);
       if (tok !== P.tok) return;
@@ -1297,6 +1336,10 @@
   const q0 = new URLSearchParams(location.search).get('q');
   if (q0 && !location.hash) location.hash = '#/search?q=' + enc(q0.slice(0, 80));
   route();
+
+  // Load the YouTube player in the background (not on iPad/iPhone, which use plain audio), so
+  // the first song doesn't wait for it
+  if (!IOS) (window.requestIdleCallback || ((f) => setTimeout(f, 1200)))(() => { loadYT().catch(() => {}); });
 
   // The rest of the site talks to the player through this (pages open inside the Music shell)
   window.ZZMusic = {

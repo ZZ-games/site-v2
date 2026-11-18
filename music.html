@@ -13,6 +13,14 @@
   <link rel="icon" type="image/png" sizes="192x192" href="tab/classroom-192.png">
   <meta name="description" content="Free music on ZZ Games: charts, search, mood mixes and playlists.">
   <meta name="theme-color" content="#020414">
+  <!-- start connecting to the music servers while the page loads -->
+  <link rel="preconnect" href="https://pipedapi.private.coffee" crossorigin>
+  <link rel="preconnect" href="https://pipedapi.ducks.party" crossorigin>
+  <link rel="preconnect" href="https://pipedapi.kavin.rocks" crossorigin>
+  <link rel="preconnect" href="https://pipedapi.adminforge.de" crossorigin>
+  <link rel="preconnect" href="https://www.youtube.com">
+  <link rel="preconnect" href="https://www.youtube-nocookie.com">
+  <link rel="dns-prefetch" href="https://api.deezer.com">
   <link rel="stylesheet" href="fonts/fonts.css">
   <link rel="stylesheet" href="music/music.css?v=202611185">
   <link rel="stylesheet" href="zz-fx.css?v=202611191">
@@ -124,7 +132,7 @@
     body.games-overlay { overflow: hidden; padding-top: 0 !important; }
     body.games-overlay > .m-top, body.games-overlay > .m-note, body.games-overlay > .m-main, body.games-overlay > .fx-bg { visibility: hidden; pointer-events: none; }
   </style>
-  <script src="music/music.js?v=202611191"></script>
+  <script src="music/music.js?v=202611195"></script>
   <script>
     (() => {
       const shell = document.getElementById('gameShell');
