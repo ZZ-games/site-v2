@@ -343,9 +343,9 @@
     var baseUrl = src.base_url, url;
     var progress = getProgress(mediaType, tmdbId, opts.season, opts.episode);
     var resume = progress && progress.position_seconds > 10 ? Math.floor(progress.position_seconds) : 0;
-    if (src.style === "path") {
-      // /embed/movie/{id}  or  /embed/tv/{id}/{season}/{episode}
-      url = baseUrl + (kind === "movie" ? "/embed/movie/" + id : "/embed/tv/" + id + "/" + (opts.season || 1) + "/" + (opts.episode || 1));
+    if (src.style === "path" || src.style === "bare") {
+      // [/embed]/movie/{id}  or  [/embed]/tv/{id}/{season}/{episode}
+      url = baseUrl + (src.style === "path" ? "/embed" : "") + (kind === "movie" ? "/movie/" + id : "/tv/" + id + "/" + (opts.season || 1) + "/" + (opts.episode || 1));
       var q = [];
       if (src.extra) q.push(src.extra);
       if (resume && src.resume) q.push(src.resume + "=" + resume);
