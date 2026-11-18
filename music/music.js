@@ -389,6 +389,12 @@
 
   /* --- YouTube engine: catalogue songs play from their official uploads (like aa-games-hub) --- */
   const YTHOSTS = ['https://pipedapi.private.coffee', 'https://pipedapi.ducks.party', 'https://pipedapi.kavin.rocks', 'https://pipedapi.adminforge.de'];
+  // A second, separate family of free lookup servers (Invidious). These volunteer servers come and
+  // go, so both families are asked at the same time and the first right answer wins.
+  const INVHOSTS = ['https://inv.nadeko.net', 'https://invidious.nerdvpn.de', 'https://invidious.f5.si', 'https://inv.tux.pizza', 'https://invidious.privacyredirect.com'];
+  // Optional, most reliable: a free YouTube Data API key (Google Cloud console → YouTube Data API v3 →
+  // Create API key, then restrict it to the website zz-games.github.io). Leave empty to skip.
+  const YT_KEY = '';
   // v2: older lookups could match the wrong song, so they're dropped
   try { localStorage.removeItem('zzs:ytv'); } catch { /* ignore */ }
   // Ask every lookup server at once and take the first good answer (one slow or dead server
@@ -443,22 +449,43 @@
     }
     return best;
   }
+  // first good JSON answer from any of these addresses
+  function raceJson(urls, good, ms = 8000) {
+    const ctl = new AbortController();
+    const kill = setTimeout(() => ctl.abort(), ms);
+    return Promise.any(urls.map((u) => fetch(u, { signal: ctl.signal })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(r.status))))
+      .then((j) => (good(j) ? j : Promise.reject(new Error('empty'))))))
+      .catch(() => null)
+      .finally(() => { clearTimeout(kill); ctl.abort(); });
+  }
+  const unEntity = (h) => { const d = document.createElement('textarea'); d.innerHTML = h || ''; return d.value; };
   const ytPending = new Map();   // lookups in progress, shared by "play" and "get ready"
   function ytResolve(t) {
     const hit = ytc[t.id];
     if (hit && Date.now() - hit[1] < 30 * 864e5) return Promise.resolve(hit[0]);
     if (ytcFail[t.id] && Date.now() - ytcFail[t.id] < 10 * 60e3) return Promise.resolve(null);
     if (ytPending.has(t.id)) return ytPending.get(t.id);
-    const q = enc([t.a, songName(t.t) || t.t].filter(Boolean).join(' '));
-    const job = piped('/search?q=' + q + '&filter=music_songs', (j) => (j.items || []).some((x) => x.url && x.type === 'stream'))
-      .then((j) => {
-        const items = j ? (j.items || []).filter((x) => x.url && x.type === 'stream') : [];
-        const best = items.length ? pickVideo(items, t) : null;   // nothing that is really this song: don't guess
-        const v = best ? (String(best.url).split('v=')[1] || '').split('&')[0] : '';
-        if (v) { ytc[t.id] = [v, Date.now()]; saveYt(); return v; }
-        ytcFail[t.id] = Date.now();
-        return null;
-      })
+    const words = [t.a, songName(t.t) || t.t].filter(Boolean).join(' '), q = enc(words);
+    // each source answers with its own list; only a video that is really this song counts
+    const pickOrFail = (items) => {
+      const best = items.length ? pickVideo(items, t) : null;
+      const v = best ? (String(best.url).split('v=')[1] || '').split('&')[0] : '';
+      return v || Promise.reject(new Error('no match'));
+    };
+    const sources = [
+      piped('/search?q=' + q + '&filter=music_songs', (j) => (j.items || []).some((x) => x.url && x.type === 'stream'))
+        .then((j) => pickOrFail(j ? (j.items || []).filter((x) => x.url && x.type === 'stream') : [])),
+      raceJson(INVHOSTS.map((h) => h + '/api/v1/search?type=video&q=' + q), (j) => Array.isArray(j) && j.some((x) => x.videoId))
+        .then((j) => pickOrFail((j || []).filter((x) => x.videoId).map((x) => ({ url: '/watch?v=' + x.videoId, type: 'stream', title: x.title, uploader: x.author, duration: x.lengthSeconds })))),
+    ];
+    if (YT_KEY) sources.push(
+      fetch('https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoCategoryId=10&maxResults=8&q=' + q + '&key=' + YT_KEY, { signal: AbortSignal.timeout(8000) })
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error(r.status))))
+        .then((j) => pickOrFail((j.items || []).map((x) => ({ url: '/watch?v=' + x.id.videoId, type: 'stream', title: unEntity(x.snippet.title), uploader: unEntity(x.snippet.channelTitle), duration: 0 })))));
+    const job = Promise.any(sources)
+      .then((v) => { ytc[t.id] = [v, Date.now()]; saveYt(); return v; })
+      .catch(() => { ytcFail[t.id] = Date.now(); return null; })
       .finally(() => ytPending.delete(t.id));
     ytPending.set(t.id, job);
     return job;
@@ -488,12 +515,28 @@
   }
   // Play the full song as plain audio; if that fails, YouTube's player, then the other sources
   async function playFullAudio(v, tok, thenTry) {
-    const url = await ytAudio(v);
+    // the stream from the first family of servers (if it answers quickly), then audio passed through
+    // the second family's servers (Invidious "local" mode, AAC itag 140)
+    const quick = await Promise.race([ytAudio(v), new Promise((r) => setTimeout(() => r(null), 2500))]);
     if (tok !== P.tok) return true;
-    if (!url) return false;
+    const list = [quick, ...INVHOSTS.slice(0, 2).map((h) => h + '/latest_version?id=' + encodeURIComponent(v) + '&itag=140&local=true')].filter(Boolean);
     if ($('#npArtBox')) $('#npArtBox').hidden = false;
     if ($('#npVid')) $('#npVid').hidden = true;
-    await playAudioSource(url, tok, () => { if (tok === P.tok) thenTry(); });
+    let i = 0;
+    const tryNext = async () => {
+      if (tok !== P.tok) return;
+      if (i >= list.length) { thenTry(); return; }
+      const url = list[i++];
+      // a stream that hasn't produced any sound data in 5s counts as failed: move on
+      // (the timer starts first: playing a stuck stream never finishes on its own)
+      setTimeout(() => {
+        if (tok === P.tok && P.eng === 'audio' && audio.getAttribute('src') === url && audio.readyState < 2 && P.onAudioFail === tryNext) {
+          P.onAudioFail = null; tryNext();
+        }
+      }, 5000);
+      playAudioSource(url, tok, tryNext);
+    };
+    await tryNext();
     return true;
   }
   const ytForget = (t) => { if (t && ytc[t.id]) { delete ytc[t.id]; saveYt(); } if (t) ytcFail[t.id] = Date.now(); };
