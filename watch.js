@@ -343,11 +343,13 @@
     var baseUrl = src.base_url, url;
     var progress = getProgress(mediaType, tmdbId, opts.season, opts.episode);
     var resume = progress && progress.position_seconds > 10 ? Math.floor(progress.position_seconds) : 0;
-    if (src.style === "vidlink") {
-      url = baseUrl + (kind === "movie" ? "/movie/" + id : "/tv/" + id + "/" + (opts.season || 1) + "/" + (opts.episode || 1));
-      url += "?primaryColor=3b82f6&title=true&autoplay=true&nextbutton=true";
-      if (resume) url += "&startAt=" + resume;
-      return url;
+    if (src.style === "path") {
+      // /embed/movie/{id}  or  /embed/tv/{id}/{season}/{episode}
+      url = baseUrl + (kind === "movie" ? "/embed/movie/" + id : "/embed/tv/" + id + "/" + (opts.season || 1) + "/" + (opts.episode || 1));
+      var q = [];
+      if (src.extra) q.push(src.extra);
+      if (resume && src.resume) q.push(src.resume + "=" + resume);
+      return url + (q.length ? "?" + q.join("&") : "");
     }
     if (kind === "movie") {
       url = baseUrl + "/embed/movie/" + id;
@@ -404,11 +406,8 @@
     if (typeof d === "string") { try { d = JSON.parse(d); } catch (x) { return; } }
     if (!d || typeof d.type !== "string") return;
     var evt;
-    if (d.type === "PLAYER_EVENT" && d.data) {          // VidLink
-      evt = d.data.event;
-      d = { currentTime: d.data.currentTime, duration: d.data.duration };
-    } else if (d.type === "MEDIA_DATA") {
-      heardFrom = true; $("overlayServer").classList.remove("nudge"); return;
+    if (d.type.indexOf("vidcore:") === 0) {             // VidCore
+      evt = d.type.replace("vidcore:", "");
     } else if (d.type.indexOf("cinesrc:") === 0) {
       evt = d.type.replace("cinesrc:", "");
     } else return;

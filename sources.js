@@ -2,8 +2,11 @@
 // If one server is down, the player's "Server" button switches to the next.
 
 const SOURCES = [
-  { id: 1, provider_name: "VidLink", style: "vidlink", base_url: "https://vidlink.pro", kind: "both", priority: 1, enabled: true },
-  { id: 2, provider_name: "CineSrc", style: "cinesrc", base_url: "https://cinesrc.st", kind: "both", priority: 2, enabled: true },
+  // only servers that work inside the site's safe (sandboxed) player; VidLink and vidsrc.buzz refuse it
+  { id: 1, provider_name: "EmbedWave", style: "path", base_url: "https://embedwave.cc", kind: "both", priority: 1, enabled: true },
+  { id: 2, provider_name: "VidCore", style: "path", base_url: "https://vidcore.org", kind: "both", priority: 2, enabled: true, resume: "startAt", extra: "theme=3b82f6" },
+  { id: 3, provider_name: "Cineby", style: "path", base_url: "https://mycineby.cc", kind: "both", priority: 3, enabled: true, extra: "color=3b82f6" },
+  { id: 4, provider_name: "CineSrc", style: "cinesrc", base_url: "https://cinesrc.st", kind: "both", priority: 4, enabled: true },
 ];
 
 function getSources(kind) {
