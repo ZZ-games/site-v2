@@ -607,13 +607,31 @@
     if (!w || w.tok !== P.tok || w.done) return;
     if (d === 1) {
       if (!w.started) { w.started = true; w.onStart?.(); }
+      P.sysPaused = false;
       setBuffering(false); setPlaying(true);
     } else if (!w.started) {
       // not really playing yet (the preview may still be on): ignore
-    } else if (d === 2) setPlaying(false);
-    else if (d === 0) { if (P.mode === 'song') onEnded(); else setPlaying(false); }
+    } else if (d === 2) {
+      // paused by the browser for leaving the tab (not by you): ask it to keep going, and pick up
+      // again the moment you come back
+      if (document.hidden && Date.now() - (P.wePaused || 0) > 1500) {
+        P.sysPaused = true;
+        // only once per time away, so pausing from the lock screen still works
+        if (!P.hideRetried) { P.hideRetried = true; setTimeout(() => { try { if (P.sysPaused && P.eng === 'yt') ytNP.playVideo(); } catch { /* ignore */ } }, 250); }
+        setPlaying(false);
+        return;
+      }
+      setPlaying(false);
+    } else if (d === 0) { if (P.mode === 'song') onEnded(); else setPlaying(false); }
     else if (d === 3) setBuffering(true);
   }
+  // back on the tab after the browser paused the song: carry on
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { P.hideRetried = false; return; }
+    if (!P.sysPaused) return;
+    P.sysPaused = false;
+    try { if (P.eng === 'yt' && P.mode) ytNP.playVideo(); } catch { /* ignore */ }
+  });
   function ytErr() { const w = ytWant; if (w && w.tok === P.tok) { ytForget(P.cur); w.fail(); } }
   // start video v; onFail runs if it errors or doesn't start within `wait` ms
   function ytStart(v, tok, o) {
@@ -809,7 +827,7 @@
       try {
         const p = ytCur();
         const st = typeof p.getPlayerState === 'function' ? p.getPlayerState() : -1;
-        if (st === 1) { p.pauseVideo(); return; }
+        if (st === 1) { P.wePaused = Date.now(); p.pauseVideo(); return; }
         if (st === 2 || st === 3 || st === 5) { p.playVideo(); return; }
       } catch { /* dead player: rebuild below */ }
       if (P.cur) playTrack(P.cur); // ended (0) or unresponsive: start the song over
@@ -817,7 +835,7 @@
     }
     if (audio.paused) audio.play().catch(() => {}); else audio.pause();
   }
-  function pause() { try { if (P.eng === 'yt') ytCur()?.pauseVideo?.(); else audio.pause(); } catch { /* ignore */ } }
+  function pause() { try { if (P.eng === 'yt') { P.wePaused = Date.now(); ytCur()?.pauseVideo?.(); } else audio.pause(); } catch { /* ignore */ } }
   const position = () => (P.eng === 'yt' ? (ytCur()?.getCurrentTime?.() || 0) : (audio.currentTime || 0));
   const duration = () => {
     if (P.mode !== 'song') return 0;
