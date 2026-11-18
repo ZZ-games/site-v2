@@ -152,7 +152,7 @@ function buildSettings() {
   const open = () => { clearTimeout(closeT); panel.classList.remove("closing"); sync(); panel.hidden = false; };
   const close = () => {
     if (panel.hidden || panel.classList.contains("closing")) return;
-    const calm = document.documentElement.classList.contains("reduce-motion") || matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const calm = document.documentElement.classList.contains("reduce-motion");
     if (calm) { panel.hidden = true; return; }
     panel.classList.add("closing");
     closeT = setTimeout(() => { panel.hidden = true; panel.classList.remove("closing"); }, 220);

@@ -13,7 +13,10 @@
   try { saved = JSON.parse(localStorage.getItem("zz-settings")) || {}; } catch (e) {}
   if (saved.reduceMotion) root.classList.add("reduce-motion");
   var mq = window.matchMedia ? matchMedia("(prefers-reduced-motion: reduce)") : { matches: false };
-  var calm = function () { return mq.matches || root.classList.contains("reduce-motion"); };
+  // Settings → "Reduce animations" turns motion off. A device set to reduce motion still gets the
+  // animations, just without the big movement (card tilt, background drift and parallax).
+  var calm = function () { return root.classList.contains("reduce-motion"); };
+  var gentle = function () { return mq.matches; };
   var isPlay = body.classList.contains("play-page");
   root.classList.add("fx");
 
@@ -103,7 +106,7 @@
     var x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
     t.style.setProperty("--mx", (x * 100).toFixed(1) + "%");
     t.style.setProperty("--my", (y * 100).toFixed(1) + "%");
-    if (!calm() && t.classList.contains("card") && !body.classList.contains("music")) {
+    if (!calm() && !gentle() && t.classList.contains("card") && !body.classList.contains("music")) {
       var k = 8;
       t.style.setProperty("--ry", ((x - .5) * k).toFixed(2) + "deg");
       t.style.setProperty("--rx", ((.5 - y) * k).toFixed(2) + "deg");
@@ -198,7 +201,7 @@
      has depth), soft light that slowly wanders behind it, lines that light
      up around the pointer, a few twinkling crossings, and a ring of light
      that runs across the grid when you click. Never on the play page. */
-  if (isPlay || mq.matches) return;
+  if (isPlay) return;
   var cv = document.createElement("canvas");
   cv.className = "fx-bg"; cv.setAttribute("aria-hidden", "true");
   body.insertBefore(cv, body.firstChild);
@@ -236,8 +239,8 @@
     if (now - lastDraw < 31) return;          // ~30fps is plenty for a backdrop
     if (body.classList.contains("games-overlay")) return;   // Music page hidden behind another page
     lastDraw = now;
-    var t = now - t0;
-    var sy = (window.scrollY || 0) * PARALLAX;
+    var t = gentle() ? 0 : now - t0;                       // reduce-motion devices: light holds still
+    var sy = (window.scrollY || 0) * (gentle() ? 0 : PARALLAX);
     var ox = ((W / 2) % CELL + CELL) % CELL, oy = ((-sy) % CELL + CELL) % CELL;
     var fadeTop = Math.max(0, 1 - (window.scrollY || 0) / 1400);
     ctx.clearRect(0, 0, W, H);

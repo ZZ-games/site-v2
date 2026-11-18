@@ -13,9 +13,8 @@
   <link rel="icon" type="image/png" sizes="192x192" href="tab/classroom-192.png">
   <meta name="description" content="ZZ AI: chat with AI right on ZZ Games. Free.">
   <link rel="stylesheet" href="fonts/fonts.css">
-  <script src="https://js.puter.com/v2/"></script>
-  <link rel="stylesheet" href="style.css?v=202611184">
-  <link rel="stylesheet" href="zz-fx.css?v=202611184">
+  <link rel="stylesheet" href="style.css?v=202611185">
+  <link rel="stylesheet" href="zz-fx.css?v=202611185">
   <link rel="expect" href="#fxReady" blocking="render">
 </head>
 <body class="ai-page">
@@ -58,7 +57,7 @@
       <button id="send" class="btn" type="submit">Send</button>
     </form>
 
-    <p class="ai-foot">AI by Puter. It can make mistakes, so double-check anything important.</p>
+    <p class="ai-foot">AI can make mistakes, so double-check anything important.</p>
   </main>
 
   <script>
@@ -68,8 +67,12 @@
       const input = document.getElementById("q");
       const sendBtn = document.getElementById("send");
 
-      // Claude Sonnet 5.5 answers. If it's unavailable (or the visitor hits its limit), the next one takes over.
-      const MODELS = ["anthropic/claude-sonnet-5-5", "anthropic/claude-haiku-5-5", "openai/gpt-5.4-nano"];
+      // Pollinations: free, and visitors never sign in. Optional: paste a free *publishable* key (starts
+      // with pk_, made at https://enter.pollinations.ai) for higher limits. Publishable keys are made to
+      // sit in public website code. Without one, the free no-key service is used (slower when busy).
+      const AI_KEY = "";
+      // GPT-5 Mini answers; if it's busy or unavailable the next model takes over.
+      const MODELS = ["openai", "claude-fast", "gemini-fast", "mistral"];
       const SYSTEM = "You are ZZ AI, the friendly assistant on the ZZ Games site (free browser games, music, movies and TV). Be concise, casual and fun. When suggesting games, pick ones on the site such as Slope, Retro Bowl, Minecraft, Geometry Dash Lite, Drift Boss, Subway Surfers, PolyTrack, Drive Mad or Paper.io 2.";
       let history = [{ role: "system", content: SYSTEM }];
       let busy = false;
@@ -95,15 +98,42 @@
         input.focus();
       }
 
-      // Chat runs through Puter.js right in the browser, so it works on GitHub Pages (no server needed).
-      async function puterChat(messages, model, onText) {
-        if (!window.puter || !puter.ai) throw new Error("The AI couldn't load. Check your connection and refresh.");
-        const resp = await puter.ai.chat(messages, false, { model, stream: true });
-        let got = "";
-        for await (const part of resp) {
-          if (part?.type === "error") throw new Error(part.message || "AI error");
-          const t = part?.type === "text" ? part.text : (typeof part?.text === "string" && !part.type ? part.text : "");
-          if (t) { got += t; onText(got); }
+      // Chat runs straight from the browser (works on GitHub Pages, no server, no sign-in).
+      // Replies stream in word by word (OpenAI-style server-sent events).
+      async function aiChat(messages, model, onText) {
+        const url = AI_KEY ? "https://gen.pollinations.ai/v1/chat/completions" : "https://text.pollinations.ai/openai";
+        const headers = { "Content-Type": "application/json" };
+        if (AI_KEY) headers.Authorization = "Bearer " + AI_KEY;
+        const r = await fetch(url, { method: "POST", headers, body: JSON.stringify({ model, messages, stream: true }), signal: AbortSignal.timeout(60000) });
+        if (!r.ok) throw new Error(r.status === 429 ? "429 busy" : "AI error " + r.status);
+        const type = r.headers.get("content-type") || "";
+        if (!type.includes("event-stream") || !r.body) {
+          // some answers come back in one piece instead of streaming
+          const raw = await r.text();
+          let out = raw;
+          try { const j = JSON.parse(raw); out = j.choices?.[0]?.message?.content ?? raw; } catch {}
+          if (out) onText(out);
+          return out;
+        }
+        const reader = r.body.getReader(), dec = new TextDecoder();
+        let buf = "", got = "";
+        for (;;) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buf += dec.decode(value, { stream: true });
+          const lines = buf.split("\n"); buf = lines.pop();
+          for (const line of lines) {
+            const d = line.trim();
+            if (!d.startsWith("data:")) continue;
+            const payload = d.slice(5).trim();
+            if (payload === "[DONE]") return got;
+            try {
+              const j = JSON.parse(payload);
+              if (j.error) throw new Error(j.error.message || "AI error");
+              const t = j.choices?.[0]?.delta?.content ?? j.choices?.[0]?.message?.content ?? "";
+              if (t) { got += t; onText(got); }
+            } catch (e) { if (e.message && e.message !== "Unexpected end of JSON input" && !(e instanceof SyntaxError)) throw e; }
+          }
         }
         return got;
       }
@@ -126,7 +156,7 @@
           const onText = (g) => { ai.classList.remove("thinking"); ai.textContent = g; stick(); };
           let got = "", lastErr = null;
           for (const model of MODELS) {
-            try { got = await puterChat(history, model, onText); lastErr = null; break; }
+            try { got = await aiChat(history, model, onText); lastErr = null; break; }
             catch (err) { lastErr = err; if (ai.textContent && !ai.classList.contains("thinking")) break; }   // stop if words already came in
           }
           if (lastErr) throw lastErr;
@@ -138,8 +168,10 @@
           ai.classList.add("err");
           const msg = String(err?.message || err || "Unknown error");
           ai.textContent = /429|rate|limit|busy/i.test(msg)
-            ? "The AI just answered someone — wait about a minute and try again."
-            : "Something went wrong: " + msg;
+            ? "The AI is busy right now. Wait a few seconds and try again."
+            : /fetch|network|timeout|abort|error 5\d\d/i.test(msg)
+              ? "The AI couldn't be reached. Check your connection and try again."
+              : "Something went wrong: " + msg;
         } finally {
           ai.classList.remove("thinking");
           busy = false;
@@ -161,6 +193,6 @@
       });
     })();
   </script>
-  <script src="zz-fx.js?v=202611184"></script>
+  <script src="zz-fx.js?v=202611185"></script>
 </body>
 </html>

@@ -14,8 +14,8 @@
   <meta name="description" content="Free music on ZZ Games: charts, search, mood mixes and playlists.">
   <meta name="theme-color" content="#020414">
   <link rel="stylesheet" href="fonts/fonts.css">
-  <link rel="stylesheet" href="music/music.css?v=202611182">
-  <link rel="stylesheet" href="zz-fx.css?v=202611184">
+  <link rel="stylesheet" href="music/music.css?v=202611185">
+  <link rel="stylesheet" href="zz-fx.css?v=202611185">
   <link rel="expect" href="#fxReady" blocking="render">
 </head>
 <body class="music">
@@ -146,7 +146,7 @@
       const go = (href) => { try { frame.contentWindow.location.replace(href); } catch { frame.src = href; } };
       // Switching between the Music page and another page cross-fades, like a normal tab switch.
       // Opening a page waits (briefly) for it to load, so you never see an empty frame.
-      const calm = () => document.documentElement.classList.contains('reduce-motion') || matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const calm = () => document.documentElement.classList.contains('reduce-motion');
       const smooth = (fn) => {
         if (!document.startViewTransition || calm()) { fn(); return null; }
         const vt = document.startViewTransition(fn);
@@ -236,6 +236,6 @@
       }
     })();
   </script>
-  <script src="zz-fx.js?v=202611184"></script>
+  <script src="zz-fx.js?v=202611185"></script>
 </body>
 </html>

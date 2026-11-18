@@ -438,7 +438,6 @@ dialog .row-btns { display: flex; justify-content: flex-end; gap: 8px; margin-to
   .grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 14px 12px; }
   .banner { padding: 90px 18px 20px; min-height: 250px; }
 }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
 .mix > span:not(.tag) { padding-right: 52px; }
 @media (max-width: 760px) {
   .sec-h p { flex-basis: 100%; order: 3; }
