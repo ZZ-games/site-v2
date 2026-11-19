@@ -2,12 +2,12 @@
 // If one server is down, the player's "Server" button switches to the next.
 
 const SOURCES = [
-  // only servers that work inside the site's safe (sandboxed) player; VidLink, VidFast, VidRock and vidsrc.buzz refuse it. Peachify first: the plainest player
+  // only servers that work inside the site's safe (sandboxed) player; VidLink, VidFast, VidRock and vidsrc.buzz refuse it. CineSrc first (it reports progress and has next-episode), then Peachify, the plainest player
   { id: 0, provider_name: "Peachify", style: "bare", base_url: "https://peachify.net", kind: "both", priority: 0, enabled: true, extra: "color=%233b82f6&allow-fullscreen=true&allow-pip=true" },
   { id: 1, provider_name: "EmbedWave", style: "path", base_url: "https://embedwave.cc", kind: "both", priority: 1, enabled: true },
   { id: 2, provider_name: "VidCore", style: "path", base_url: "https://vidcore.org", kind: "both", priority: 2, enabled: true, resume: "startAt", extra: "theme=3b82f6" },
   { id: 3, provider_name: "Cineby", style: "path", base_url: "https://mycineby.cc", kind: "both", priority: 3, enabled: true, extra: "color=3b82f6" },
-  { id: 4, provider_name: "CineSrc", style: "cinesrc", base_url: "https://cinesrc.st", kind: "both", priority: 4, enabled: true },
+  { id: 4, provider_name: "CineSrc", style: "cinesrc", base_url: "https://cinesrc.st", kind: "both", priority: -1, enabled: true },
 ];
 
 function getSources(kind) {
