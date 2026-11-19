@@ -315,15 +315,7 @@
     btn.classList.remove("nudge", "idle");
     $("overlayServerName").textContent = src.provider_name;
     idleSoon();
-    // nothing heard from the server after a while: point at the Server button
     clearTimeout(nudgeTimer);
-    nudgeTimer = setTimeout(function () {
-      if (!overlayOpen || heardFrom) return;
-      btn.classList.remove("idle");
-      btn.classList.add("nudge");
-      // some servers never say they started, so the hint fades on its own
-      nudgeTimer = setTimeout(function () { btn.classList.remove("nudge"); idleSoon(); }, 6000);
-    }, 12000);
   }
   // the Server label fades away after a few seconds so only the video shows; it's still there to tap
   var idleTimer = 0;
