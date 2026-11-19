@@ -127,6 +127,17 @@ const GAMES = [
   { title: "Stick Merge", category: "Action", repo: "Stick-Merge", url: "https://zz-games.github.io/site/games/stick-merge/", image: "covers/stick-merge.jpg", new: true },
   { title: "Crazy Cattle 3D", category: "Action", repo: "Crazy-Cattle-3D", url: "https://zz-games.github.io/site/games/crazy-cattle-3d/", image: "covers/crazy-cattle-3d.jpg", new: true, featured: true },
 
+  { title: "Basket Champs", category: "Sports", repo: "BasketChamps", image: "covers/basket-champs.jpg", new: true },
+  { title: "Axis Football League", category: "Sports", repo: "AxisFootballLeague", image: "covers/axis-football-league.jpg", new: true },
+  { title: "Ping Pong Go!", category: "Sports", repo: "ping", image: "covers/ping-pong-go.jpg", new: true, tags: "table tennis" },
+  { title: "Bloons TD 4", category: "Other", repo: "BloonsTowerDefense4", image: "covers/bloons-td-4.jpg", new: true, tags: "bloons tower defense btd4 strategy" },
+  { title: "Gun Mayhem", category: "Action", repo: "GunMayhem", image: "covers/gun-mayhem.jpg", new: true },
+  { title: "Nitro Knights.io", category: "Action", repo: "NitroKnightsIO", image: "covers/nitro-knights-io.jpg", new: true },
+  { title: "Trains.io", category: "Arcade", repo: "TrainsIO", image: "covers/trains-io.jpg", new: true },
+  { title: "WormEat.io", category: "Arcade", repo: "WormEatIO", image: "covers/wormeat-io.jpg", new: true, tags: "worm snake" },
+  { title: "GoTet.io", category: "Arcade", repo: "GoTetIO", image: "covers/gotet-io.jpg", new: true },
+  { title: "Dots.io", category: "Arcade", repo: "DotsIO", image: "covers/dots-io.jpg", new: true },
+
   // No link yet — add a url (or repo) and remove the // to put these on the site
   // { title: "Henry Stickman", category: "Action", repo: "", url: "", image: "covers/henry-stickman.jpg" },
   // { title: "Snowball.io", category: "Arcade", repo: "", url: "", image: "covers/snowball-io.jpg" },
