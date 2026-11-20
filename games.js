@@ -131,11 +131,11 @@ const GAMES = [
   { title: "Axis Football League", category: "Sports", repo: "AxisFootballLeague", image: "covers/axis-football-league.jpg?v=2", new: true },
   { title: "Ping Pong Go!", category: "Sports", repo: "ping", image: "covers/ping-pong-go.jpg?v=2", new: true, tags: "table tennis" },
   { title: "Bloons TD 4", category: "Other", repo: "BloonsTowerDefense4", image: "covers/bloons-td-4.jpg?v=2", new: true, tags: "bloons tower defense btd4 strategy" },
-  { title: "Gun Mayhem", category: "Action", repo: "GunMayhem", image: "covers/gun-mayhem.jpg", new: true },
-  { title: "Nitro Knights.io", category: "Action", repo: "NitroKnightsIO", image: "covers/nitro-knights-io.jpg", new: true },
-  { title: "Trains.io", category: "Arcade", repo: "TrainsIO", image: "covers/trains-io.jpg", new: true },
-  { title: "WormEat.io", category: "Arcade", repo: "WormEatIO", image: "covers/wormeat-io.jpg", new: true, tags: "worm snake" },
-  { title: "GoTet.io", category: "Arcade", repo: "GoTetIO", image: "covers/gotet-io.jpg?v=2", new: true },
+  { title: "Gun Mayhem", category: "Action", repo: "GunMayhem", image: "covers/gun-mayhem.jpg?v=3", new: true },
+  { title: "Nitro Knights.io", category: "Action", repo: "NitroKnightsIO", image: "covers/nitro-knights-io.jpg?v=3", new: true },
+  { title: "Trains.io", category: "Arcade", repo: "TrainsIO", image: "covers/trains-io.jpg?v=3", new: true },
+  { title: "WormEat.io", category: "Arcade", repo: "WormEatIO", image: "covers/wormeat-io.jpg?v=3", new: true, tags: "worm snake" },
+  { title: "GoTet.io", category: "Arcade", repo: "GoTetIO", image: "covers/gotet-io.jpg?v=3", new: true },
   { title: "Dots.io", category: "Arcade", repo: "DotsIO", image: "covers/dots-io.jpg", new: true },
 
   // No link yet — add a url (or repo) and remove the // to put these on the site
